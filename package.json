@@ -1,0 +1,19 @@
+{
+  "name": "debugrush",
+  "private": true,
+  "version": "0.0.1",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n WEB,SERVER -c auto \"npm run dev -w apps/web\" \"npm run dev -w apps/server\"",
+    "dev:web": "npm run dev -w apps/web",
+    "dev:server": "npm run dev -w apps/server",
+    "build": "npm run build -ws",
+    "lint": "npm run lint -ws"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

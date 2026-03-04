@@ -1,0 +1,1 @@
+console.log("apps/server/index.ts set up");
