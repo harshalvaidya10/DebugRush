@@ -23,6 +23,13 @@ declare global {
   }
 }
 
+/**
+ * Render the main application UI: show a waiting screen until a room state is received, then render the lobby with room metadata and player list.
+ *
+ * Subscribes to the global socket at `window.__socket` for `"room:state"` updates, updates internal room state when events arrive, logs a warning if the socket is not present, and unsubscribes on unmount.
+ *
+ * @returns The React element for the app — either a waiting/debug screen or the lobby view populated from the current `RoomState`.
+ */
 export default function App() {
   const [room, setRoom] = useState<RoomState | null>(null);
 
