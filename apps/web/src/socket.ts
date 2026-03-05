@@ -17,8 +17,15 @@ function getOrCreateClientId(): string {
 }
 
 const configuredSocketUrl = import.meta.env.VITE_WS_URL;
+const hasConfiguredSocketUrl =
+  typeof configuredSocketUrl === "string" && configuredSocketUrl.trim().length > 0;
+
+if (!hasConfiguredSocketUrl && !import.meta.env.DEV) {
+  throw new Error("Missing VITE_WS_URL for non-development build.");
+}
+
 const socketUrl =
-  typeof configuredSocketUrl === "string" && configuredSocketUrl.trim().length > 0
+  hasConfiguredSocketUrl
     ? configuredSocketUrl
     : "http://localhost:4000";
 

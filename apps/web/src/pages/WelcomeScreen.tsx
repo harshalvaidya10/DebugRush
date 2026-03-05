@@ -21,9 +21,11 @@ export default function WelcomeScreen({
     const [mode, setMode] = useState<Mode>("create");
     const [name, setName] = useState("");
     const [roomId, setRoomId] = useState("");
+    const [validationError, setValidationError] = useState<string | null>(null);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setValidationError(null);
 
         const trimmedName = name.trim();
         const normalizedRoomId = roomId.trim().toUpperCase();
@@ -35,7 +37,11 @@ export default function WelcomeScreen({
             return;
         }
 
-        if (!normalizedRoomId) return;
+        if (!/^[A-Z0-9]{6}$/.test(normalizedRoomId)) {
+            setValidationError("Room ID must be 6 uppercase letters or numbers.");
+            return;
+        }
+
         onJoinRoom(normalizedRoomId, trimmedName);
     };
 
@@ -89,7 +95,8 @@ export default function WelcomeScreen({
                         </div>
                     )}
 
-                    {error ? <p className="text-sm text-red-400">{error}</p> : null}
+                    {validationError ? <p className="text-sm text-red-400">{validationError}</p> : null}
+                    {!validationError && error ? <p className="text-sm text-red-400">{error}</p> : null}
 
                     <button
                         type="submit"

@@ -31,6 +31,20 @@ type SavedSession = {
 const ROOM_SESSION_KEY = "debugrush_last_session";
 const roomSessionStorage = import.meta.env.DEV ? sessionStorage : localStorage;
 
+function isSavedSession(value: unknown): value is SavedSession {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as { roomId?: unknown; name?: unknown };
+  return (
+    typeof candidate.roomId === "string" &&
+    candidate.roomId.trim().length > 0 &&
+    typeof candidate.name === "string" &&
+    candidate.name.trim().length > 0
+  );
+}
+
 declare global {
   interface Window {
     __socket?: any;
@@ -60,8 +74,8 @@ export default function App() {
     try {
       const raw = roomSessionStorage.getItem(ROOM_SESSION_KEY);
       if (!raw) return null;
-      const parsed = JSON.parse(raw) as SavedSession;
-      if (!parsed.roomId || !parsed.name) return null;
+      const parsed: unknown = JSON.parse(raw);
+      if (!isSavedSession(parsed)) return null;
       return parsed;
     } catch {
       return null;
@@ -126,12 +140,22 @@ export default function App() {
       return; // important
     }
 
-    setLoading(true);
-    setJoinError(null);
     const normalizedRoomId = roomId.trim().toUpperCase();
     const trimmedName = name.trim();
+    if (!normalizedRoomId || !trimmedName) {
+      setJoinError("Name and room ID are required.");
+      return;
+    }
+
+    setLoading(true);
+    setJoinError(null);
+    setAutoJoinAttempted(true);
     const nextSession = { roomId: normalizedRoomId, name: trimmedName };
-    roomSessionStorage.setItem(ROOM_SESSION_KEY, JSON.stringify(nextSession));
+    try {
+      roomSessionStorage.setItem(ROOM_SESSION_KEY, JSON.stringify(nextSession));
+    } catch (error) {
+      console.warn("Failed to persist room session:", error);
+    }
     setSavedSession(nextSession);
 
     socket.emit("room:join", {
@@ -154,7 +178,11 @@ export default function App() {
       socket.emit("room:leave");
     }
 
-    roomSessionStorage.removeItem(ROOM_SESSION_KEY);
+    try {
+      roomSessionStorage.removeItem(ROOM_SESSION_KEY);
+    } catch (error) {
+      console.warn("Failed to clear room session:", error);
+    }
     setSavedSession(null);
     setAutoJoinAttempted(false);
     setRoom(null);

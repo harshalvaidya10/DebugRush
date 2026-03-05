@@ -123,6 +123,26 @@ function reassignHostIfNeeded(state: RoomState, leavingPlayerId: string) {
     }
 }
 
+function ensureHostExistsInPlayers(state: RoomState, preferredHostId?: string) {
+    const hasCurrentHost = state.players.some((p) => p.id === state.hostPlayerId);
+    if (hasCurrentHost) {
+        return;
+    }
+
+    if (preferredHostId) {
+        const preferred = state.players.find((p) => p.id === preferredHostId);
+        if (preferred) {
+            state.hostPlayerId = preferred.id;
+            return;
+        }
+    }
+
+    const fallback = state.players[0];
+    if (fallback) {
+        state.hostPlayerId = fallback.id;
+    }
+}
+
 async function removePlayerFromRoomAtomic(roomId: string, playerId: string): Promise<RoomState | null> {
     const roomKey = `room:${roomId}`;
 
@@ -148,6 +168,7 @@ async function removePlayerFromRoomAtomic(roomId: string, playerId: string): Pro
             // "Hard leave": remove player from room list entirely.
             nextState.players.splice(leavingIndex, 1);
             reassignHostIfNeeded(nextState, playerId);
+            ensureHostExistsInPlayers(nextState);
             nextState.updatedAtMs = Date.now();
 
             const tx = redis.multi();
@@ -225,6 +246,15 @@ io.on("connection", (socket) => {
             return;
         }
 
+        const currentRoomId = socket.data.roomId as string | undefined;
+        if (currentRoomId && currentRoomId !== roomId) {
+            socket.emit("action:error", {
+                code: "LEAVE_REQUIRED",
+                message: "Leave the current room before joining another room.",
+            });
+            return;
+        }
+
         try {
             const roomKey = `room:${roomId}`;
             let state: RoomState | null = null;
@@ -262,6 +292,7 @@ io.on("connection", (socket) => {
                         const existingPlayer = nextState.players.find(
                             (p) => p.id === authenticatedPlayerId
                         );
+                        ensureHostExistsInPlayers(nextState, existingPlayer?.id);
 
                         if (!existingPlayer) {
                             const connectedPlayersCount = nextState.players.filter(
@@ -288,6 +319,8 @@ io.on("connection", (socket) => {
                             existingPlayer.name = name;
                         }
 
+                        // Ensure host always points to a currently present player after cleanup/join updates.
+                        ensureHostExistsInPlayers(nextState);
                         nextState.updatedAtMs = now;
                     }
 
@@ -343,11 +376,13 @@ io.on("connection", (socket) => {
 
         clearPendingDisconnectRemoval(roomId, playerId);
 
+        let leaveSucceeded = false;
         try {
             const state = await removePlayerFromRoomAtomic(roomId, playerId);
             if (state) {
                 // Send update only to remaining players, not the leaver.
                 socket.to(roomId).emit("room:state", state);
+                leaveSucceeded = true;
             }
         } catch (error) {
             if ((error as Error).message === "ROOM_BUSY") {
@@ -362,7 +397,9 @@ io.on("connection", (socket) => {
                     message: "Failed to leave room",
                 });
             }
-        } finally {
+        }
+
+        if (leaveSucceeded) {
             // Clean per-socket room tracking after leave completes.
             socket.data.roomId = undefined;
             socket.data.playerId = undefined;
