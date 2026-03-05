@@ -1,5 +1,6 @@
-// apps/web/src/App.tsx
 import { useEffect, useState } from "react";
+import WelcomeScreen from "./pages/WelcomeScreen";
+import LobbyScreen from "./pages/LobbyScreen";
 
 type Player = {
   id: string;
@@ -17,114 +18,167 @@ type RoomState = {
   updatedAtMs: number;
 };
 
+type ActionError = {
+  code?: string;
+  message?: string;
+};
+
+type SavedSession = {
+  roomId: string;
+  name: string;
+};
+
+const ROOM_SESSION_KEY = "debugrush_last_session";
+const roomSessionStorage = import.meta.env.DEV ? sessionStorage : localStorage;
+
 declare global {
   interface Window {
     __socket?: any;
   }
 }
 
+function createRoomId() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let id = "";
+  for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  return id;
+}
+
 export default function App() {
   const [room, setRoom] = useState<RoomState | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [savedSession, setSavedSession] = useState<SavedSession | null>(() => {
+    try {
+      const raw = roomSessionStorage.getItem(ROOM_SESSION_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as SavedSession;
+      if (!parsed.roomId || !parsed.name) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  });
+  const [autoJoinAttempted, setAutoJoinAttempted] = useState(false);
+
+  const socket = window.__socket;
 
   useEffect(() => {
-    const socket = window.__socket;
-    if (!socket) {
-      console.warn(
-        "Socket not found. Make sure you attached it to window.__socket in main.tsx"
-      );
-      return;
-    }
+    if (!socket) return;
+
+    const requestIdentity = () => {
+      socket.emit("auth:whoami");
+    };
+
+    const onIdentity = (payload: { userId?: string }) => {
+      if (typeof payload?.userId === "string" && payload.userId.length > 0) {
+        setMyUserId(payload.userId);
+        setJoinError((current) =>
+          current === "Waiting for identity..." ? null : current
+        );
+      }
+    };
 
     const onRoomState = (state: RoomState) => {
       setRoom(state);
+      setLoading(false);
+      setJoinError(null);
     };
 
+    const onActionError = (err: ActionError) => {
+      setLoading(false);
+      setJoinError(err?.message ?? "Join failed");
+      console.log("join error from server:", err);
+
+    };
+
+    socket.on("connect", requestIdentity);
+    socket.on("auth:identity", onIdentity)
     socket.on("room:state", onRoomState);
-
+    socket.on("action:error", onActionError);
+    requestIdentity();
     return () => {
+      socket.off("connect", requestIdentity);
+      socket.off("auth:identity", onIdentity);
       socket.off("room:state", onRoomState);
+      socket.off("action:error", onActionError);
     };
-  }, []);
+  }, [socket]);
 
-  //if not joinned a room
+  const emitJoin = (roomId: string, name: string) => {
+    if (!socket) {
+      setJoinError("Socket not connected");
+      return;
+    }
+
+    const userId = myUserId;
+    if (!userId) {
+      socket.emit("auth:whoami");
+      setJoinError("Waiting for identity...");
+      return; // important
+    }
+
+    setLoading(true);
+    setJoinError(null);
+    const normalizedRoomId = roomId.trim().toUpperCase();
+    const trimmedName = name.trim();
+    const nextSession = { roomId: normalizedRoomId, name: trimmedName };
+    roomSessionStorage.setItem(ROOM_SESSION_KEY, JSON.stringify(nextSession));
+    setSavedSession(nextSession);
+
+    socket.emit("room:join", {
+      roomId: normalizedRoomId,
+      playerId: userId,
+      name: trimmedName,
+    });
+  };
+
+  const handleCreateRoom = (name: string) => {
+    emitJoin(createRoomId(), name);
+  };
+
+  const handleJoinRoom = (roomId: string, name: string) => {
+    emitJoin(roomId, name);
+  };
+
+  const handleLeaveRoom = () => {
+    if (socket && room) {
+      socket.emit("room:leave");
+    }
+
+    roomSessionStorage.removeItem(ROOM_SESSION_KEY);
+    setSavedSession(null);
+    setAutoJoinAttempted(false);
+    setRoom(null);
+    setJoinError(null);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (!socket || !myUserId || room || !savedSession || autoJoinAttempted) return;
+    setAutoJoinAttempted(true);
+    emitJoin(savedSession.roomId, savedSession.name);
+  }, [socket, myUserId, room, savedSession, autoJoinAttempted]);
+
+  const isIdentityReady = Boolean(myUserId);
+  const welcomeError = joinError ?? (isIdentityReady ? null : "Waiting for identity...");
+  const isWelcomeLoading = loading || !isIdentityReady;
+
+
   if (!room) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="text-center">
-          <div className="text-2xl font-semibold">DebugRush</div>
-          <div className="mt-2 text-sm text-gray-500">Waiting for room state…</div>
-          <div className="mt-4 text-xs text-gray-400">
-            (Open DevTools to confirm socket is connected.)
-          </div>
-        </div>
-      </div>
+      <WelcomeScreen
+        loading={isWelcomeLoading}
+        error={welcomeError}
+        onCreateRoom={handleCreateRoom}
+        onJoinRoom={handleJoinRoom}
+      />
     );
   }
 
+  // Keep your existing lobby UI here
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6">
-      <div className="max-w-3xl mx-auto">
-        <header className="flex items-center justify-between">
-          <div>
-            <div className="text-2xl font-bold">Lobby</div>
-            <div className="text-sm text-zinc-400 mt-1">
-              Room: <span className="font-mono text-zinc-200">{room.roomId}</span>
-            </div>
-          </div>
-          <div className="text-xs text-zinc-400">
-            Status: <span className="text-zinc-200">{room.status}</span>
-          </div>
-        </header>
-
-        <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-semibold">Players</div>
-            <div className="text-xs text-zinc-400">
-              {room.players.length}/5
-            </div>
-          </div>
-
-          <ul className="mt-3 space-y-2">
-            {room.players.map((p) => {
-              const isHost = p.id === room.hostPlayerId;
-              return (
-                <li
-                  key={p.id}
-                  className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/30 px-3 py-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`inline-block h-2.5 w-2.5 rounded-full ${p.connected ? "bg-green-500" : "bg-zinc-600"
-                        }`}
-                      title={p.connected ? "Connected" : "Disconnected"}
-                    />
-                    <span className="font-medium">{p.name}</span>
-                    <span className="text-xs text-zinc-500 font-mono">
-                      ({p.id})
-                    </span>
-                    {isHost && (
-                      <span className="ml-2 text-xs rounded-full bg-blue-600/20 border border-blue-600/40 px-2 py-0.5 text-blue-200">
-                        HOST
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="text-xs text-zinc-400">
-                    {p.connected ? "online" : "offline"}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-
-          <div className="mt-4 text-xs text-zinc-500">
-            updatedAt:{" "}
-            <span className="font-mono">
-              {new Date(room.updatedAtMs).toLocaleTimeString()}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <LobbyScreen room={room} meId={myUserId ?? undefined} onLeave={handleLeaveRoom} />
   );
 }
