@@ -85,6 +85,20 @@ export default function App() {
 
   const socket = window.__socket;
 
+  const clearLocalSessionAndReturnToWelcome = () => {
+    try {
+      roomSessionStorage.removeItem(ROOM_SESSION_KEY);
+    } catch (error) {
+      console.warn("Failed to clear room session:", error);
+    }
+
+    setSavedSession(null);
+    setAutoJoinAttempted(false);
+    setRoom(null);
+    setJoinError(null);
+    setLoading(false);
+  };
+
   useEffect(() => {
     if (!socket) return;
 
@@ -107,6 +121,10 @@ export default function App() {
       setJoinError(null);
     };
 
+    const onRoomLeft = () => {
+      clearLocalSessionAndReturnToWelcome();
+    };
+
     const onActionError = (err: ActionError) => {
       setLoading(false);
       setJoinError(err?.message ?? "Join failed");
@@ -117,12 +135,14 @@ export default function App() {
     socket.on("connect", requestIdentity);
     socket.on("auth:identity", onIdentity)
     socket.on("room:state", onRoomState);
+    socket.on("room:left", onRoomLeft);
     socket.on("action:error", onActionError);
     requestIdentity();
     return () => {
       socket.off("connect", requestIdentity);
       socket.off("auth:identity", onIdentity);
       socket.off("room:state", onRoomState);
+      socket.off("room:left", onRoomLeft);
       socket.off("action:error", onActionError);
     };
   }, [socket]);
@@ -177,17 +197,6 @@ export default function App() {
     if (socket && room) {
       socket.emit("room:leave");
     }
-
-    try {
-      roomSessionStorage.removeItem(ROOM_SESSION_KEY);
-    } catch (error) {
-      console.warn("Failed to clear room session:", error);
-    }
-    setSavedSession(null);
-    setAutoJoinAttempted(false);
-    setRoom(null);
-    setJoinError(null);
-    setLoading(false);
   };
 
   useEffect(() => {

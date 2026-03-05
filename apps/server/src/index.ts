@@ -30,6 +30,8 @@ const MAX_PLAYERS_PER_ROOM = 5;
 const MAX_JOIN_TX_RETRIES = 8;
 // Small grace period prevents refresh from being treated as a real leave.
 const DISCONNECT_REMOVE_GRACE_MS = 1500;
+const DISCONNECT_REMOVE_MAX_RETRIES = 4;
+const DISCONNECT_REMOVE_RETRY_BACKOFF_MS = 75;
 
 if (!REDIS_URL) {
     throw new Error("Missing REDIS_URL in apps/server/.env");
@@ -85,6 +87,12 @@ function hasActiveSocketForPlayer(roomId: string, playerId: string, excludeSocke
     }
 
     return false;
+}
+
+function sleep(ms: number) {
+    return new Promise<void>((resolve) => {
+        setTimeout(resolve, ms);
+    });
 }
 
 function getAuthenticatedUserId(socket: Socket): string | null {
@@ -379,10 +387,11 @@ io.on("connection", (socket) => {
         let leaveSucceeded = false;
         try {
             const state = await removePlayerFromRoomAtomic(roomId, playerId);
+            // null means room/player already gone; treat as completed cleanup.
+            leaveSucceeded = true;
             if (state) {
                 // Send update only to remaining players, not the leaver.
                 socket.to(roomId).emit("room:state", state);
-                leaveSucceeded = true;
             }
         } catch (error) {
             if ((error as Error).message === "ROOM_BUSY") {
@@ -404,6 +413,7 @@ io.on("connection", (socket) => {
             socket.data.roomId = undefined;
             socket.data.playerId = undefined;
             socket.leave(roomId);
+            socket.emit("room:left");
         }
     });
 
@@ -428,15 +438,37 @@ io.on("connection", (socket) => {
                 return;
             }
 
-            try {
-                const state = await removePlayerFromRoomAtomic(roomId, playerId);
-                if (state) {
-                    io.to(roomId).emit("room:state", state);
-                }
-            } catch (error) {
-                if ((error as Error).message !== "ROOM_BUSY") {
+            let removed = false;
+            for (let attempt = 1; attempt <= DISCONNECT_REMOVE_MAX_RETRIES; attempt++) {
+                try {
+                    const state = await removePlayerFromRoomAtomic(roomId, playerId);
+                    if (state) {
+                        io.to(roomId).emit("room:state", state);
+                    }
+                    removed = true;
+                    break;
+                } catch (error) {
+                    const message = (error as Error).message;
+                    if (message === "ROOM_BUSY") {
+                        if (attempt < DISCONNECT_REMOVE_MAX_RETRIES) {
+                            await sleep(DISCONNECT_REMOVE_RETRY_BACKOFF_MS * attempt);
+                            continue;
+                        }
+
+                        break;
+                    }
+
                     console.error("disconnect removal failed:", error);
+                    return;
                 }
+            }
+
+            if (!removed) {
+                console.error("disconnect removal failed after retries:", {
+                    roomId,
+                    playerId,
+                    retries: DISCONNECT_REMOVE_MAX_RETRIES,
+                });
             }
         }, DISCONNECT_REMOVE_GRACE_MS);
         pendingDisconnectRemovalTimers.set(key, timer);
