@@ -8,6 +8,7 @@ type RoundScreenProps = {
   onSubmitProposerPick?: (pick: Option, reason?: string) => void;
   onSubmitCounterPick?: (pick: Option, reason?: string) => void;
   onSubmitVote?: (target: VoteTarget) => void;
+  onSkipReveal?: () => void;
   error?: string | null;
 };
 
@@ -80,6 +81,7 @@ export default function RoundScreen({
   onSubmitProposerPick,
   onSubmitCounterPick,
   onSubmitVote,
+  onSkipReveal,
   error = null,
 }: RoundScreenProps) {
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -150,8 +152,7 @@ export default function RoundScreen({
       return optionEntries;
     }
 
-    const filtered = optionEntries.filter(([optionKey]) => voteOptionKeys.has(optionKey));
-    return filtered.length > 0 ? filtered : optionEntries;
+    return optionEntries.filter(([optionKey]) => voteOptionKeys.has(optionKey));
   }, [room.phase, voteOptionKeys, optionEntries]);
 
   const canEnterProposerReason = room.phase === "propose" && isMeProposer && !room.proposerPick;
@@ -273,9 +274,9 @@ export default function RoundScreen({
   }, [room.phase]);
 
   return (
-    <div className="min-h-screen px-4 py-6 sm:px-6 lg:px-10">
+    <div className="screen-round min-h-screen px-4 py-6 sm:px-6 lg:px-10">
       {toast ? (
-        <div className="toast-pop fixed right-4 top-4 z-50 max-w-sm rounded-lg border border-cyan-300 bg-cyan-100 px-4 py-3 text-sm font-medium text-cyan-900 shadow-xl sm:right-6 sm:top-6">
+        <div className="toast-pop cyber-toast fixed right-4 top-4 z-50 max-w-sm rounded-lg border border-cyan-300 bg-cyan-100 px-4 py-3 text-sm font-medium text-cyan-900 shadow-xl sm:right-6 sm:top-6">
           {toast.message}
         </div>
       ) : null}
@@ -303,7 +304,7 @@ export default function RoundScreen({
               <p className="font-semibold text-violet-900">{roleLabel}</p>
             </div>
 
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center">
+            <div className="cyber-timer rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center">
               <p className="text-[11px] uppercase tracking-wide text-amber-700">Time Left</p>
               <p className="font-code text-lg font-semibold text-amber-900">{countdown}</p>
             </div>
@@ -327,7 +328,7 @@ export default function RoundScreen({
 
         <section className="round-board-grid">
           <aside className="role-column app-card p-4 sm:p-5">
-            <div className="role-card proposer">
+            <div className={`role-card proposer ${room.phase === "propose" ? "phase-active" : ""}`}>
               <div className="player-row">
                 <div className="avatar-shell avatar-proposer">{getInitials(proposerName)}</div>
                 <div>
@@ -366,7 +367,7 @@ export default function RoundScreen({
               ) : null}
             </div>
 
-            <div className="role-card counter mt-3">
+            <div className={`role-card counter mt-3 ${room.phase === "counter" ? "phase-active" : ""}`}>
               <div className="player-row">
                 <div className="avatar-shell avatar-counter">{getInitials(counterName)}</div>
                 <div>
@@ -423,6 +424,12 @@ export default function RoundScreen({
                   const isProposerOption = room.proposerPick === optionKey;
                   const isSystemOption = room.systemAlternativePick === optionKey;
                   const isCounterOption = !room.systemAlternativePick && room.counterPick === optionKey;
+                  const isMySubmittedVoteForThisOption =
+                    room.phase === "vote" &&
+                    Boolean(myVote) &&
+                    (myVote === "proposer"
+                      ? isProposerOption
+                      : isSystemOption || (!room.systemAlternativePick && isCounterOption));
 
                   const availableTargets: VoteTarget[] = [];
                   if (room.phase === "vote") {
@@ -444,7 +451,7 @@ export default function RoundScreen({
                   let selected = false;
                   let cardClickable = false;
                   let disabledReason = "";
-                  let accentClass = "border-slate-200 bg-white hover:border-slate-300";
+                  let accentClass = "border-slate-700/70 bg-slate-950/70 hover:border-cyan-400/70";
                   let onCardClick: (() => void) | undefined;
 
                   if (room.phase === "propose") {
@@ -456,7 +463,7 @@ export default function RoundScreen({
                     } else {
                       cardClickable = true;
                       selected = proposerSelection === optionKey;
-                      accentClass = "border-emerald-300 bg-emerald-50 hover:border-emerald-400";
+                      accentClass = "border-amber-400/70 bg-amber-950/30 hover:border-amber-300";
                       onCardClick = () => setProposerSelection(optionKey);
                     }
                   } else if (room.phase === "counter") {
@@ -468,18 +475,21 @@ export default function RoundScreen({
                     } else {
                       cardClickable = true;
                       selected = counterSelection === optionKey;
-                      accentClass = "border-fuchsia-300 bg-fuchsia-50 hover:border-fuchsia-400";
+                      accentClass = "border-rose-400/70 bg-rose-950/30 hover:border-rose-300";
                       onCardClick = () => setCounterSelection(optionKey);
                     }
                   } else if (room.phase === "vote") {
                     if (!isMeVoter) {
                       disabledReason = "Only voters can submit in vote phase.";
+                    } else if (myVote) {
+                      selected = isMySubmittedVoteForThisOption;
+                      disabledReason = "Vote already submitted for this round.";
                     } else if (availableTargets.length === 0) {
                       disabledReason = "This option is not available to vote right now.";
                     } else {
                       cardClickable = true;
                       selected = voteSelectionOption === optionKey;
-                      accentClass = "border-sky-300 bg-sky-50 hover:border-sky-400";
+                      accentClass = "border-sky-400/70 bg-sky-950/30 hover:border-sky-300";
                       onCardClick = () => {
                         setVoteSelectionOption(optionKey);
                       };
@@ -491,46 +501,58 @@ export default function RoundScreen({
                   return (
                     <li
                       key={optionKey}
-                      className={`rounded-xl border p-3 transition ${accentClass} ${
+                      onClick={cardClickable ? onCardClick : undefined}
+                      onKeyDown={
+                        cardClickable && onCardClick
+                          ? (event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                onCardClick();
+                              }
+                            }
+                          : undefined
+                      }
+                      tabIndex={cardClickable ? 0 : -1}
+                      role="button"
+                      aria-disabled={!cardClickable}
+                      className={`option-card rounded-xl border p-3 transition ${accentClass} ${
                         cardClickable ? "cursor-pointer" : "opacity-90"
                       }`}
                     >
-                      <button
-                        type="button"
-                        onClick={onCardClick}
-                        disabled={!cardClickable}
-                        className="w-full text-left"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <p className="text-sm font-medium text-slate-800">
-                            <span className="font-code mr-2">{optionKey}.</span>
-                            {optionText}
-                          </p>
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-sm font-medium text-slate-800">
+                          <span className="font-code mr-2">{optionKey}.</span>
+                          {optionText}
+                        </p>
 
-                          <div className="flex flex-wrap gap-1">
-                            {isProposerOption ? (
-                              <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-800">
-                                proposer
-                              </span>
-                            ) : null}
-                            {isCounterOption ? (
-                              <span className="rounded-full bg-fuchsia-100 px-2 py-0.5 text-[11px] font-semibold text-fuchsia-800">
-                                counter
-                              </span>
-                            ) : null}
-                            {isSystemOption ? (
-                              <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[11px] font-semibold text-cyan-800">
-                                system
-                              </span>
-                            ) : null}
-                            {selected ? (
-                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-                                selected
-                              </span>
-                            ) : null}
-                          </div>
+                        <div className="flex flex-wrap gap-1">
+                          {isProposerOption ? (
+                            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-800">
+                              proposer
+                            </span>
+                          ) : null}
+                          {isCounterOption ? (
+                            <span className="rounded-full bg-fuchsia-100 px-2 py-0.5 text-[11px] font-semibold text-fuchsia-800">
+                              counter
+                            </span>
+                          ) : null}
+                          {isSystemOption ? (
+                            <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[11px] font-semibold text-cyan-800">
+                              system
+                            </span>
+                          ) : null}
+                          {selected ? (
+                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                              selected
+                            </span>
+                          ) : null}
+                          {isMySubmittedVoteForThisOption ? (
+                            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-800">
+                              your vote
+                            </span>
+                          ) : null}
                         </div>
-                      </button>
+                      </div>
 
                       {!cardClickable && disabledReason ? (
                         <p className="mt-2 text-xs text-slate-600">{disabledReason}</p>
@@ -570,7 +592,7 @@ export default function RoundScreen({
                         </button>
                       ) : null}
 
-                      {room.phase === "vote" && selected && isMeVoter ? (
+                      {room.phase === "vote" && selected && isMeVoter && !myVote ? (
                         <div className="mt-3 space-y-2">
                           {availableTargets.length > 1 ? (
                             <div className="flex flex-wrap gap-2">
@@ -619,7 +641,11 @@ export default function RoundScreen({
                 })}
               </ul>
             ) : (
-              <p className="mt-3 text-sm text-slate-600">Options appear when question data is loaded.</p>
+              <p className="mt-3 text-sm text-slate-600">
+                {room.phase === "vote"
+                  ? "Waiting for vote options to lock in. Try again in a moment."
+                  : "Options appear when question data is loaded."}
+              </p>
             )}
 
             {room.phase === "vote" ? (
@@ -643,7 +669,7 @@ export default function RoundScreen({
             </div>
           </main>
 
-          <aside className="voter-column app-card p-4 sm:p-5">
+          <aside className={`voter-column app-card p-4 sm:p-5 ${room.phase === "vote" ? "phase-active-voters" : ""}`}>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Voters</h3>
             <p className="mt-1 text-xs text-slate-500">Right side team votes for proposer or counter</p>
 
@@ -654,7 +680,7 @@ export default function RoundScreen({
                   const voteLabel = vote ? `votes ${vote.toUpperCase()}` : "has not voted yet";
 
                   return (
-                    <li key={player.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                    <li key={player.id} className="voter-card rounded-xl border border-slate-200 bg-white p-3">
                       <div className="player-row">
                         <div className="avatar-shell avatar-voter">{getInitials(player.name)}</div>
                         <div>
@@ -727,6 +753,19 @@ export default function RoundScreen({
                   ? "Next round will begin automatically."
                   : "Your room is now finished. Use Leave to return."}
             </p>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  onSkipReveal?.();
+                  pushToast("Skipping reveal...");
+                }}
+                className="rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-900 hover:bg-cyan-100"
+              >
+                Skip
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

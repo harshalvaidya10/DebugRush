@@ -5,6 +5,7 @@ import type {
     GameStartPayload,
     JoinRoom,
     ProposerSubmitPayload,
+    RevealSkipPayload,
     RoomState,
     VoteSubmitPayload,
 } from "./schemas";
@@ -22,6 +23,7 @@ export interface ClientToServerEvents {
     "round:counter:submit": (payload: CounterSubmitPayload) => void;
     "round:vote:submit": (payload: VoteSubmitPayload) => void;
     "round:final:submit": (payload: FinalDecisionPayload) => void;
+    "round:reveal:skip": (payload: RevealSkipPayload) => void;
 }
 
 export interface ServerToClientEvents {

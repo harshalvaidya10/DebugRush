@@ -52,7 +52,7 @@ export default function GameOverScreen({
           : "Game over.";
 
   return (
-    <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-10">
+    <div className="screen-gameover min-h-screen px-4 py-8 sm:px-6 lg:px-10">
       <div className="mx-auto max-w-5xl space-y-4">
         <header className="app-card p-6 sm:p-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -69,7 +69,7 @@ export default function GameOverScreen({
             {isHost && onPlayAgain ? (
               <button
                 onClick={onPlayAgain}
-                className="rounded-lg border border-emerald-300 bg-emerald-100 px-4 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-200"
+                className="cyber-btn-primary rounded-lg border border-emerald-300 bg-emerald-100 px-4 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-200"
               >
                 Play Again
               </button>
@@ -77,7 +77,7 @@ export default function GameOverScreen({
             {onLeave ? (
               <button
                 onClick={onLeave}
-                className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="cyber-btn-secondary rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 Leave Room
               </button>
@@ -98,7 +98,7 @@ export default function GameOverScreen({
         ) : null}
 
         <section className="app-card p-6 sm:p-7">
-          <div className="rounded-xl border border-rose-200 bg-rose-50/80 p-4">
+          <div className="final-reveal rounded-xl border border-rose-200 bg-rose-50/80 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-700">Final Reveal</p>
             <h2 className="mt-2 text-2xl font-bold text-slate-900">{headline}</h2>
 
@@ -148,7 +148,7 @@ export default function GameOverScreen({
                 const rankLabel = `${index + 1}${index === 0 ? "st" : index === 1 ? "nd" : index === 2 ? "rd" : "th"}`;
 
                 return (
-                  <li key={playerId} className="app-card-soft p-3 flex items-center justify-between">
+                  <li key={playerId} className="app-card-soft leaderboard-row p-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-semibold text-slate-500">{rankLabel}</span>
                       <div>
@@ -156,7 +156,6 @@ export default function GameOverScreen({
                           {player?.name ?? playerId}
                           {isMe ? <span className="ml-2 text-xs text-slate-500">(You)</span> : null}
                         </p>
-                        <p className="font-code text-xs text-slate-500">{playerId}</p>
                       </div>
                     </div>
 

@@ -16,6 +16,7 @@ import {
     submitCounterPick,
     submitFinalDecision,
     submitProposerPick,
+    submitRevealSkip,
     submitVote,
 } from "./engine/gameEngine";
 import { registerGameStartHandler } from "./handlers/gameStart";
@@ -269,6 +270,7 @@ io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>)
         submitCounterPick,
         submitVote,
         submitFinalDecision,
+        submitRevealSkip,
     });
 
     //Player joins a room

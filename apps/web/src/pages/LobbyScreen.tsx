@@ -20,7 +20,7 @@ export default function LobbyScreen({
   const hasMinimumPlayers = connectedPlayersCount >= 3;
 
   return (
-    <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-10">
+    <div className="screen-lobby min-h-screen px-4 py-8 sm:px-6 lg:px-10">
       <div className="mx-auto max-w-6xl grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <section className="app-card p-6 sm:p-7">
           <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -65,7 +65,9 @@ export default function LobbyScreen({
                 return (
                   <li
                     key={player.id}
-                    className="app-card-soft p-3 flex items-center justify-between"
+                    className={`app-card-soft player-card-lobby p-3 flex items-center justify-between ${
+                      isHost ? "is-host" : ""
+                    }`}
                   >
                     <div>
                       <div className="flex items-center gap-2">
@@ -114,7 +116,7 @@ export default function LobbyScreen({
               {canStartGame && onStartGame ? (
                 <button
                   onClick={onStartGame}
-                  className="w-full rounded-lg bg-gradient-to-r from-emerald-500 to-lime-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-200 hover:brightness-105"
+                  className="cyber-btn-primary w-full rounded-lg bg-gradient-to-r from-emerald-500 to-lime-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-200 hover:brightness-105"
                 >
                   Start Game
                 </button>
@@ -143,7 +145,7 @@ export default function LobbyScreen({
               {onLeave ? (
                 <button
                   onClick={onLeave}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="cyber-btn-secondary w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   Leave Lobby
                 </button>
@@ -154,7 +156,7 @@ export default function LobbyScreen({
           <section className="app-card p-5">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Game Rules</h3>
             <div className="mt-3 space-y-3 text-sm text-slate-700">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 rule-tile">
                 <p className="font-semibold text-slate-900">Round flow</p>
                 <p className="mt-1">1) Proposer picks an option.</p>
                 <p>2) Counter picks an option.</p>
@@ -162,14 +164,14 @@ export default function LobbyScreen({
                 <p>4) Reveal decides next round or game over.</p>
               </div>
 
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 rule-tile">
                 <p className="font-semibold text-slate-900">Voting cases</p>
                 <p className="mt-1">If proposer and counter pick the same option, system creates a 50/50 choice with one extra option.</p>
                 <p>If proposer and counter pick different options and both are wrong, game ends immediately.</p>
                 <p>If votes tie, there is no majority and the game moves to next round.</p>
               </div>
 
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 rule-tile">
                 <p className="font-semibold text-slate-900">Start requirements</p>
                 <p className="mt-1">Only host can start.</p>
                 <p>Minimum 3 connected players are required.</p>
