@@ -3,6 +3,7 @@ import type { ActionError, AuthIdentityPayload, RoomState } from "@debugrush/sha
 import WelcomeScreen from "./pages/WelcomeScreen";
 import LobbyScreen from "./pages/LobbyScreen";
 import RoundScreen from "./pages/RoundScreen";
+import GameOverScreen from "./pages/GameOverScreen";
 import socket from "./socket";
 
 type SavedSession = {
@@ -200,6 +201,17 @@ export default function App() {
   if (room.status === "in_round") {
     return (
       <RoundScreen
+        room={room}
+        meId={myUserId ?? undefined}
+        onLeave={handleLeaveRoom}
+        error={joinError}
+      />
+    );
+  }
+
+  if (room.status === "game_over") {
+    return (
+      <GameOverScreen
         room={room}
         meId={myUserId ?? undefined}
         onLeave={handleLeaveRoom}

@@ -58,14 +58,27 @@ function normalizeLegacyRoomState(raw: string): RoomState | null {
                   ? "game_over"
                   : "in_round";
 
+        if (normalizedStatus === "lobby") {
+            return {
+                schemaVersion: 1,
+                roomId: legacy.roomId,
+                hostPlayerId: legacy.hostPlayerId,
+                status: "lobby",
+                players: legacy.players,
+                roundIndex: 0,
+                scoreboard: createDefaultScoreboard(legacy.players.map((player) => player.id)),
+                updatedAtMs: legacy.updatedAtMs,
+            };
+        }
+
         return {
             schemaVersion: 1,
             roomId: legacy.roomId,
             hostPlayerId: legacy.hostPlayerId,
             status: normalizedStatus,
             players: legacy.players,
-            roundIndex: normalizedStatus === "lobby" ? 0 : 1,
-            phase: "propose",
+            roundIndex: 1,
+            phase: normalizedStatus === "game_over" ? "reveal" : "propose",
             phaseEndsAtMs: 0,
             questionId: "bootstrap",
             questionPrompt: null,

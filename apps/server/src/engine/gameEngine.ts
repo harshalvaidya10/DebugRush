@@ -78,6 +78,11 @@ export type AdvancePhaseInput = {
 
 export type AdvancePhaseResult = EngineSuccess | EngineFailure;
 
+export type RecoverRoomTimersInput = {
+    redis: Redis;
+    io: Server<ClientToServerEvents, ServerToClientEvents>;
+};
+
 function buildActionError(code: string, message: string): EngineFailure {
     return {
         ok: false,
@@ -181,6 +186,56 @@ async function handleRoomPhaseTimeout(input: AdvancePhaseInput) {
     }
 }
 
+async function listPersistedRoomIds(redis: Redis): Promise<string[]> {
+    const roomIds: string[] = [];
+    let cursor = "0";
+
+    do {
+        const [nextCursor, keys] = await redis.scan(cursor, "MATCH", "room:*", "COUNT", 200);
+        cursor = nextCursor;
+
+        for (const key of keys) {
+            if (!key.startsWith("room:")) {
+                continue;
+            }
+
+            const roomId = key.slice("room:".length);
+            if (roomId.length > 0) {
+                roomIds.push(roomId);
+            }
+        }
+    } while (cursor !== "0");
+
+    return roomIds;
+}
+
+export async function recoverInRoundRoomTimers(input: RecoverRoomTimersInput): Promise<void> {
+    const roomIds = await listPersistedRoomIds(input.redis);
+    let recoveredCount = 0;
+
+    for (const roomId of roomIds) {
+        try {
+            const roomState = await getRoom(input.redis, roomId);
+            if (!roomState || roomState.status !== "in_round") {
+                continue;
+            }
+
+            schedulePhaseTimerForState(roomState, input.redis, input.io);
+            recoveredCount += 1;
+        } catch (error) {
+            console.error("failed to recover room timer", {
+                roomId,
+                error,
+            });
+        }
+    }
+
+    console.log("room timer recovery complete", {
+        roomsScanned: roomIds.length,
+        timersRecovered: recoveredCount,
+    });
+}
+
 export async function startGame(input: StartGameInput): Promise<StartGameResult> {
     const mutationResult = await mutateRoomWithWatch(
         input.redis,
@@ -260,20 +315,28 @@ export async function startGame(input: StartGameInput): Promise<StartGameResult>
         };
     }
 
-    input.io.to(input.roomId).emit("room:state", mutationResult.state);
-    schedulePhaseTimerForState(mutationResult.state, input.redis, input.io);
+    const startedState = mutationResult.state;
+    if (startedState.status !== "in_round") {
+        return buildActionError(
+            "INVALID_STATE",
+            "Room did not transition to in_round during startGame."
+        );
+    }
+
+    input.io.to(input.roomId).emit("room:state", startedState);
+    schedulePhaseTimerForState(startedState, input.redis, input.io);
 
     console.log("game:start completed", {
         roomId: input.roomId,
         requesterPlayerId: input.requesterPlayerId,
-        questionId: mutationResult.state.questionId,
-        phase: mutationResult.state.phase,
-        phaseEndsAtMs: mutationResult.state.phaseEndsAtMs,
+        questionId: startedState.questionId,
+        phase: startedState.phase,
+        phaseEndsAtMs: startedState.phaseEndsAtMs,
     });
 
     return {
         ok: true,
-        state: mutationResult.state,
+        state: startedState,
     };
 }
 
@@ -345,23 +408,31 @@ export async function advancePhase(input: AdvancePhaseInput): Promise<AdvancePha
         };
     }
 
-    input.io.to(input.roomId).emit("room:state", mutationResult.state);
+    const nextState = mutationResult.state;
+    if (nextState.status === "lobby") {
+        return buildActionError(
+            "INVALID_STATE",
+            "advancePhase produced lobby state, which is invalid."
+        );
+    }
 
-    if (mutationResult.state.status === "in_round") {
-        schedulePhaseTimerForState(mutationResult.state, input.redis, input.io);
+    input.io.to(input.roomId).emit("room:state", nextState);
+
+    if (nextState.status === "in_round") {
+        schedulePhaseTimerForState(nextState, input.redis, input.io);
     } else {
         clearRoomTimer(input.roomId);
     }
 
     console.log("phase advanced", {
         roomId: input.roomId,
-        status: mutationResult.state.status,
-        phase: mutationResult.state.phase,
-        phaseEndsAtMs: mutationResult.state.phaseEndsAtMs,
+        status: nextState.status,
+        phase: nextState.phase,
+        phaseEndsAtMs: nextState.phaseEndsAtMs,
     });
 
     return {
         ok: true,
-        state: mutationResult.state,
+        state: nextState,
     };
 }

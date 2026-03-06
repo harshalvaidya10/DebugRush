@@ -4,8 +4,9 @@ import {
     type ClientToServerEvents,
     type ServerToClientEvents,
 } from "@debugrush/shared";
+import type { Socket } from "socket.io";
 import type Redis from "ioredis";
-import type { Server, Socket } from "socket.io";
+import type { Server } from "socket.io";
 import type { StartGameInput, StartGameResult } from "../engine/gameEngine";
 
 type RegisterGameStartHandlerParams = {

@@ -48,13 +48,22 @@ export const PlayerSchema = z.object({
     joinedAtMs: z.number().int().nonnegative(),
 });
 
-export const RoomStateSchema = z.object({
+const RoomStateBaseSchema = z.object({
     schemaVersion: z.literal(1),
     roomId: RoomIdSchema,
     hostPlayerId: PlayerIdSchema,
-    status: z.enum(["lobby", "in_round", "game_over"]),
     players: z.array(PlayerSchema).max(5),
     roundIndex: z.number().int().nonnegative(),
+    scoreboard: z.record(z.string(), z.number().int()),
+    updatedAtMs: z.number().int().nonnegative(),
+});
+
+export const LobbyRoomStateSchema = RoomStateBaseSchema.extend({
+    status: z.literal("lobby"),
+});
+
+export const InRoundRoomStateSchema = RoomStateBaseSchema.extend({
+    status: z.enum(["in_round", "game_over"]),
     phase: PhaseSchema,
     phaseEndsAtMs: z.number().int().nonnegative(),
     questionId: z.string().min(1),
@@ -69,9 +78,12 @@ export const RoomStateSchema = z.object({
     votes: z.record(z.string(), VoteTargetSchema),
     finalDecision: VoteTargetSchema.nullable(),
     finalCorrect: z.boolean().nullable(),
-    scoreboard: z.record(z.string(), z.number().int()),
-    updatedAtMs: z.number().int().nonnegative(),
 });
+
+export const RoomStateSchema = z.discriminatedUnion("status", [
+    LobbyRoomStateSchema,
+    InRoundRoomStateSchema,
+]);
 
 export type JoinRoom = z.infer<typeof JoinRoomSchema>;
 export type GameStartPayload = z.infer<typeof GameStartPayloadSchema>;
@@ -81,4 +93,6 @@ export type VoteTarget = z.infer<typeof VoteTargetSchema>;
 export type Phase = z.infer<typeof PhaseSchema>;
 export type QuestionOptions = z.infer<typeof QuestionOptionsSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
+export type LobbyRoomState = z.infer<typeof LobbyRoomStateSchema>;
+export type InRoundRoomState = z.infer<typeof InRoundRoomStateSchema>;
 export type RoomState = z.infer<typeof RoomStateSchema>;

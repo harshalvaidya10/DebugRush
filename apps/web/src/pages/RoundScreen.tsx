@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import type { RoomState } from "@debugrush/shared";
+import type { InRoundRoomState } from "@debugrush/shared";
 
 type RoundScreenProps = {
-  room: RoomState;
+  room: InRoundRoomState;
   meId?: string;
   onLeave?: () => void;
   error?: string | null;

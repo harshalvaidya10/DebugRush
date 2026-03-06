@@ -10,13 +10,13 @@ import {
     type RoomState,
     type ServerToClientEvents,
 } from "@debugrush/shared";
-import { startGame } from "./engine/gameEngine";
+import { recoverInRoundRoomTimers, startGame } from "./engine/gameEngine";
 import { registerGameStartHandler } from "./handlers/gameStart";
+import { ROOM_TTL_SECONDS } from "./repo/roomsRepo";
 
 const PORT = Number(process.env.PORT ?? 4000);
 const REDIS_URL = process.env.REDIS_URL;
 // We keep room state in Redis for 2 hours since last update.
-const ROOM_TTL_SECONDS = 60 * 60 * 2;
 const MAX_PLAYERS_PER_ROOM = 5;
 // If two users join/leave at the same time, retry this many times.
 const MAX_JOIN_TX_RETRIES = 8;
@@ -42,10 +42,6 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
     cors: {
         origin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
     },
-});
-
-httpServer.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
 });
 
 const pendingDisconnectRemovalTimers = new Map<string, NodeJS.Timeout>();
@@ -106,20 +102,6 @@ function createLobbyRoomState(roomId: string, hostPlayerId: string, hostName: st
             },
         ],
         roundIndex: 0,
-        phase: "propose",
-        phaseEndsAtMs: 0,
-        questionId: "bootstrap",
-        questionPrompt: null,
-        questionOptions: null,
-        proposerPlayerId: hostPlayerId,
-        counterPlayerId: null,
-        proposerPick: null,
-        proposerReason: null,
-        counterPick: null,
-        counterReason: null,
-        votes: {},
-        finalDecision: null,
-        finalCorrect: null,
         scoreboard: {
             [hostPlayerId]: 0,
         },
@@ -227,7 +209,9 @@ async function removePlayerFromRoomAtomic(roomId: string, playerId: string): Pro
             // "Hard leave": remove player from room list entirely.
             nextState.players.splice(leavingIndex, 1);
             delete nextState.scoreboard[playerId];
-            delete nextState.votes[playerId];
+            if (nextState.status !== "lobby") {
+                delete nextState.votes[playerId];
+            }
             reassignHostIfNeeded(nextState, playerId);
             ensureHostExistsInPlayers(nextState);
             nextState.updatedAtMs = Date.now();
@@ -534,3 +518,20 @@ io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>)
         console.log("socket disconnected:", socket.id);
     });
 });
+
+async function bootServer() {
+    try {
+        await recoverInRoundRoomTimers({
+            redis,
+            io,
+        });
+    } catch (error) {
+        console.error("room timer recovery failed during startup", error);
+    }
+
+    httpServer.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
+
+void bootServer();

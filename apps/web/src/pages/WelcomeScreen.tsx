@@ -57,7 +57,7 @@ export default function WelcomeScreen({
                 <div className="mt-5 grid grid-cols-2 gap-2 rounded-lg bg-zinc-900 p-1 border border-zinc-800">
                     <button
                         type="button"
-                        onClick={() => { setMode("join"); setValidationError(null); }}
+                        onClick={() => { setMode("create"); setValidationError(null); }}
                         className={`rounded-md px-3 py-2 text-sm ${mode === "create" ? "bg-zinc-100 text-zinc-900" : "text-zinc-300"
                             }`}
                     >
@@ -65,7 +65,7 @@ export default function WelcomeScreen({
                     </button>
                     <button
                         type="button"
-                        onClick={() => { setMode("create"); setValidationError(null); }}
+                        onClick={() => { setMode("join"); setValidationError(null); }}
                         className={`rounded-md px-3 py-2 text-sm ${mode === "join" ? "bg-zinc-100 text-zinc-900" : "text-zinc-300"
                             }`}
                     >
