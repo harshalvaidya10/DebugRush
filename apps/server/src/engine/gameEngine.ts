@@ -809,6 +809,7 @@ export type AdvancePhaseInput = {
     expectedPhase?: Phase;
     expectedPhaseEndsAtMs?: number;
     force?: boolean;
+    requesterPlayerId?: string;
 };
 
 export type AdvancePhaseResult = EngineResult;
@@ -1736,11 +1737,6 @@ export async function submitRevealSkip(
         return buildActionError("INVALID_STATE", "Reveal skip is only available during active rounds.");
     }
 
-    const playerCheck = ensureActiveRoundPlayer(currentState, input.requesterPlayerId);
-    if (playerCheck) {
-        return playerCheck;
-    }
-
     if (currentState.phase !== "reveal") {
         return buildActionError("INVALID_PHASE", "Reveal skip is only available in reveal phase.");
     }
@@ -1750,7 +1746,9 @@ export async function submitRevealSkip(
         redis: input.redis,
         io: input.io,
         expectedPhase: "reveal",
+        expectedPhaseEndsAtMs: currentState.phaseEndsAtMs,
         force: true,
+        requesterPlayerId: input.requesterPlayerId,
     });
 
     if ("error" in advanceResult) {
@@ -1788,6 +1786,13 @@ export async function advancePhase(input: AdvancePhaseInput): Promise<AdvancePha
                 current.phaseEndsAtMs !== input.expectedPhaseEndsAtMs
             ) {
                 return buildActionError("STALE_TIMER", "Phase end timestamp changed before timeout.");
+            }
+
+            if (input.requesterPlayerId) {
+                const playerCheck = ensureActiveRoundPlayer(current, input.requesterPlayerId);
+                if (playerCheck) {
+                    return playerCheck;
+                }
             }
 
             const now = Date.now();
