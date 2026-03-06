@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import type { ActionError, AuthIdentityPayload, RoomState } from "@debugrush/shared";
+import type {
+  ActionError,
+  AuthIdentityPayload,
+  Option,
+  RoomState,
+  VoteTarget,
+} from "@debugrush/shared";
 import WelcomeScreen from "./pages/WelcomeScreen";
 import LobbyScreen from "./pages/LobbyScreen";
 import RoundScreen from "./pages/RoundScreen";
@@ -35,13 +41,7 @@ function createRoomId() {
   return id;
 }
 
-/**
- * Render the main application UI: show a waiting screen until a room state is received, then render the lobby with room metadata and player list.
- *
- * Subscribes to the global socket at `window.__socket` for `"room:state"` updates, updates internal room state when events arrive, logs a warning if the socket is not present, and unsubscribes on unmount.
- *
- * @returns The React element for the app — either a waiting/debug screen or the lobby view populated from the current `RoomState`.
- */
+
 export default function App() {
   const [room, setRoom] = useState<RoomState | null>(null);
   const [loading, setLoading] = useState(false);
@@ -176,6 +176,53 @@ export default function App() {
     socket.emit("game:start", { roomId: room.roomId });
   };
 
+  const handlePlayAgain = () => {
+    if (!room || room.status !== "game_over") {
+      return;
+    }
+
+    setJoinError(null);
+    socket.emit("game:start", { roomId: room.roomId });
+  };
+
+  const handleSubmitProposerPick = (pick: Option, reason?: string) => {
+    if (!room || room.status !== "in_round") {
+      return;
+    }
+
+    setJoinError(null);
+    socket.emit("round:proposer:submit", {
+      roomId: room.roomId,
+      pick,
+      reason,
+    });
+  };
+
+  const handleSubmitCounterPick = (pick: Option, reason?: string) => {
+    if (!room || room.status !== "in_round") {
+      return;
+    }
+
+    setJoinError(null);
+    socket.emit("round:counter:submit", {
+      roomId: room.roomId,
+      pick,
+      reason,
+    });
+  };
+
+  const handleSubmitVote = (target: VoteTarget) => {
+    if (!room || room.status !== "in_round") {
+      return;
+    }
+
+    setJoinError(null);
+    socket.emit("round:vote:submit", {
+      roomId: room.roomId,
+      target,
+    });
+  };
+
   useEffect(() => {
     if (!myUserId || room || !savedSession || autoJoinAttempted) return;
     setAutoJoinAttempted(true);
@@ -204,6 +251,9 @@ export default function App() {
         room={room}
         meId={myUserId ?? undefined}
         onLeave={handleLeaveRoom}
+        onSubmitProposerPick={handleSubmitProposerPick}
+        onSubmitCounterPick={handleSubmitCounterPick}
+        onSubmitVote={handleSubmitVote}
         error={joinError}
       />
     );
@@ -215,6 +265,7 @@ export default function App() {
         room={room}
         meId={myUserId ?? undefined}
         onLeave={handleLeaveRoom}
+        onPlayAgain={handlePlayAgain}
         error={joinError}
       />
     );

@@ -12,7 +12,6 @@ import type { StartGameInput, StartGameResult } from "../engine/gameEngine";
 type RegisterGameStartHandlerParams = {
     redis: Redis;
     io: Server<ClientToServerEvents, ServerToClientEvents>;
-    allowSinglePlayerStartInDev: boolean;
     socket: Socket<ClientToServerEvents, ServerToClientEvents>;
     startGame: (input: StartGameInput) => Promise<StartGameResult>;
 };
@@ -29,7 +28,6 @@ function emitActionError(
 export function registerGameStartHandler({
     redis,
     io,
-    allowSinglePlayerStartInDev,
     socket,
     startGame,
 }: RegisterGameStartHandlerParams) {
@@ -66,13 +64,19 @@ export function registerGameStartHandler({
             return;
         }
 
-        const result = await startGame({
-            roomId: requestedRoomId,
-            requesterPlayerId,
-            redis,
-            io,
-            allowSinglePlayerStartInDev,
-        });
+        let result: StartGameResult;
+        try {
+            result = await startGame({
+                roomId: requestedRoomId,
+                requesterPlayerId,
+                redis,
+                io,
+            });
+        } catch (err) {
+            console.error("game:start failed unexpectedly", err);
+            emitActionError(socket, "INTERNAL_ERROR", "Failed to start game.");
+            return;
+        }
 
         if ("error" in result) {
             emitActionError(socket, result.error.code, result.error.message);

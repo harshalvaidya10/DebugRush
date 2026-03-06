@@ -1,4 +1,13 @@
-import type { ActionError, GameStartPayload, JoinRoom, RoomState } from "./schemas";
+import type {
+    ActionError,
+    CounterSubmitPayload,
+    FinalDecisionPayload,
+    GameStartPayload,
+    JoinRoom,
+    ProposerSubmitPayload,
+    RoomState,
+    VoteSubmitPayload,
+} from "./schemas";
 
 export type AuthIdentityPayload = {
     userId: string;
@@ -9,6 +18,10 @@ export interface ClientToServerEvents {
     "room:join": (payload: JoinRoom) => void;
     "room:leave": () => void;
     "game:start": (payload: GameStartPayload) => void;
+    "round:proposer:submit": (payload: ProposerSubmitPayload) => void;
+    "round:counter:submit": (payload: CounterSubmitPayload) => void;
+    "round:vote:submit": (payload: VoteSubmitPayload) => void;
+    "round:final:submit": (payload: FinalDecisionPayload) => void;
 }
 
 export interface ServerToClientEvents {

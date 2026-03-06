@@ -10,8 +10,16 @@ import {
     type RoomState,
     type ServerToClientEvents,
 } from "@debugrush/shared";
-import { recoverInRoundRoomTimers, startGame } from "./engine/gameEngine";
+import {
+    recoverInRoundRoomTimers,
+    startGame,
+    submitCounterPick,
+    submitFinalDecision,
+    submitProposerPick,
+    submitVote,
+} from "./engine/gameEngine";
 import { registerGameStartHandler } from "./handlers/gameStart";
+import { registerRoundActionHandlers } from "./handlers/roundActions";
 import { ROOM_TTL_SECONDS } from "./repo/roomsRepo";
 
 const PORT = Number(process.env.PORT ?? 4000);
@@ -24,10 +32,6 @@ const MAX_JOIN_TX_RETRIES = 8;
 const DISCONNECT_REMOVE_GRACE_MS = 1500;
 const DISCONNECT_REMOVE_MAX_RETRIES = 4;
 const DISCONNECT_REMOVE_RETRY_BACKOFF_MS = 75;
-const allowSinglePlayerStartInDev =
-    process.env.NODE_ENV !== "production" &&
-    (process.env.ALLOW_SOLO_START_IN_DEV === "1" ||
-        process.env.ALLOW_SOLO_START_IN_DEV === "true");
 
 if (!REDIS_URL) {
     throw new Error("Missing REDIS_URL in apps/server/.env");
@@ -253,9 +257,18 @@ io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>)
     registerGameStartHandler({
         redis,
         io,
-        allowSinglePlayerStartInDev,
         socket,
         startGame,
+    });
+
+    registerRoundActionHandlers({
+        redis,
+        io,
+        socket,
+        submitProposerPick,
+        submitCounterPick,
+        submitVote,
+        submitFinalDecision,
     });
 
     //Player joins a room
@@ -344,6 +357,15 @@ io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>)
                         ensureHostExistsInPlayers(nextState, existingPlayer?.id);
 
                         if (!existingPlayer) {
+                            if (nextState.status === "in_round") {
+                                await redis.unwatch();
+                                socket.emit("action:error", {
+                                    code: "GAME_IN_PROGRESS",
+                                    message: "Cannot join while a game is in progress. Wait for game over.",
+                                });
+                                return;
+                            }
+
                             const connectedPlayersCount = nextState.players.filter(
                                 (p) => p.connected
                             ).length;
