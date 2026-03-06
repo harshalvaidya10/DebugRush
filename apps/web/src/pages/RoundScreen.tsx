@@ -1,11 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
-import type { InRoundRoomState } from "@debugrush/shared";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { InRoundRoomState, Option, VoteTarget } from "@debugrush/shared";
 
 type RoundScreenProps = {
   room: InRoundRoomState;
   meId?: string;
   onLeave?: () => void;
+  onSubmitProposerPick?: (pick: Option, reason?: string) => void;
+  onSubmitCounterPick?: (pick: Option, reason?: string) => void;
+  onSubmitVote?: (target: VoteTarget) => void;
   error?: string | null;
+};
+
+type ToastState = {
+  id: number;
+  message: string;
 };
 
 function formatCountdown(msRemaining: number) {
@@ -18,8 +26,71 @@ function formatCountdown(msRemaining: number) {
   return `${minutes}:${seconds}`;
 }
 
-export default function RoundScreen({ room, meId, onLeave, error = null }: RoundScreenProps) {
+function getPlayerName(room: InRoundRoomState, playerId: string | null) {
+  if (!playerId) {
+    return "Unassigned";
+  }
+
+  return room.players.find((player) => player.id === playerId)?.name ?? playerId;
+}
+
+function getInitials(name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return "?";
+  }
+
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) {
+    return parts[0].slice(0, 1).toUpperCase();
+  }
+
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+}
+
+function getRoleLabel(isMeProposer: boolean, isMeCounter: boolean, isMeVoter: boolean) {
+  if (isMeProposer) {
+    return "Proposer";
+  }
+
+  if (isMeCounter) {
+    return "Counter";
+  }
+
+  if (isMeVoter) {
+    return "Voter";
+  }
+
+  return "Spectator";
+}
+
+function formatChoice(room: InRoundRoomState, pick: Option | null) {
+  if (!pick) {
+    return null;
+  }
+
+  const optionText = room.questionOptions?.[pick] ?? "";
+  return `${pick}. ${optionText}`.trim();
+}
+
+export default function RoundScreen({
+  room,
+  meId,
+  onLeave,
+  onSubmitProposerPick,
+  onSubmitCounterPick,
+  onSubmitVote,
+  error = null,
+}: RoundScreenProps) {
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const [proposerReason, setProposerReason] = useState("");
+  const [counterReason, setCounterReason] = useState("");
+  const [proposerSelection, setProposerSelection] = useState<Option | null>(null);
+  const [counterSelection, setCounterSelection] = useState<Option | null>(null);
+  const [voteSelectionOption, setVoteSelectionOption] = useState<Option | null>(null);
+
+  const lastAnnouncementKeyRef = useRef("");
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -31,34 +102,216 @@ export default function RoundScreen({ room, meId, onLeave, error = null }: Round
     };
   }, []);
 
+  const proposerName = getPlayerName(room, room.proposerPlayerId);
+  const counterName = getPlayerName(room, room.counterPlayerId);
+  const isMeProposer = Boolean(meId && meId === room.proposerPlayerId);
+  const isMeCounter = Boolean(meId && room.counterPlayerId && meId === room.counterPlayerId);
+  const isMeVoter = Boolean(meId && !isMeProposer && !isMeCounter);
+  const roleLabel = getRoleLabel(isMeProposer, isMeCounter, isMeVoter);
+
+  const proposerPlayer = room.players.find((player) => player.id === room.proposerPlayerId);
+  const counterPlayer = room.players.find((player) => player.id === room.counterPlayerId);
+  const voters = useMemo(
+    () =>
+      room.players.filter(
+        (player) => player.id !== room.proposerPlayerId && player.id !== room.counterPlayerId
+      ),
+    [room.players, room.proposerPlayerId, room.counterPlayerId]
+  );
+
   const countdown = useMemo(
     () => formatCountdown(room.phaseEndsAtMs - nowMs),
     [room.phaseEndsAtMs, nowMs]
   );
 
-  const proposer = room.players.find((player) => player.id === room.proposerPlayerId);
-  const isMeProposer = Boolean(meId && meId === room.proposerPlayerId);
-  const options = room.questionOptions ? Object.entries(room.questionOptions) : [];
+  const optionEntries = useMemo(
+    () => (room.questionOptions ? (Object.entries(room.questionOptions) as [Option, string][]) : []),
+    [room.questionOptions]
+  );
+  const voteOptionKeys = useMemo(() => {
+    if (room.phase !== "vote") {
+      return null;
+    }
+
+    const keys = new Set<Option>();
+    if (room.proposerPick) {
+      keys.add(room.proposerPick);
+    }
+    if (room.systemAlternativePick) {
+      keys.add(room.systemAlternativePick);
+    } else if (room.counterPick) {
+      keys.add(room.counterPick);
+    }
+
+    return keys;
+  }, [room.phase, room.proposerPick, room.counterPick, room.systemAlternativePick]);
+  const visibleOptionEntries = useMemo(() => {
+    if (room.phase !== "vote" || !voteOptionKeys) {
+      return optionEntries;
+    }
+
+    const filtered = optionEntries.filter(([optionKey]) => voteOptionKeys.has(optionKey));
+    return filtered.length > 0 ? filtered : optionEntries;
+  }, [room.phase, voteOptionKeys, optionEntries]);
+
+  const canEnterProposerReason = room.phase === "propose" && isMeProposer && !room.proposerPick;
+  const canEnterCounterReason = room.phase === "counter" && isMeCounter && !room.counterPick;
+  const myVote = meId ? room.votes[meId] : undefined;
+  const isSystemAlternativeRound = room.phase === "vote" && Boolean(room.systemAlternativePick);
+  const isTieReveal = room.phase === "reveal" && room.finalDecision === null && room.finalCorrect === null;
+
+  const correctOptionText = room.correctOption ? room.questionOptions?.[room.correctOption] ?? "" : "";
+  const winningPick = isTieReveal
+    ? null
+    : room.finalDecision === "counter"
+      ? room.systemAlternativePick ?? room.counterPick
+      : room.proposerPick;
+  const winningPickText = winningPick ? room.questionOptions?.[winningPick] ?? "" : "";
+  const winningName = isTieReveal
+    ? "No majority"
+    : room.finalDecision === "counter"
+      ? room.systemAlternativePick
+        ? "System Alternative"
+        : counterName
+      : proposerName;
+
+  const pushToast = (message: string) => {
+    setToast({
+      id: Date.now() + Math.floor(Math.random() * 10_000),
+      message,
+    });
+  };
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+
+    const timeoutHandle = setTimeout(() => {
+      setToast((current) => (current?.id === toast.id ? null : current));
+    }, 2500);
+
+    return () => {
+      clearTimeout(timeoutHandle);
+    };
+  }, [toast]);
+
+  useEffect(() => {
+    const announcementKey = [
+      room.roundIndex,
+      room.phase,
+      room.proposerPlayerId,
+      room.counterPlayerId ?? "none",
+      room.finalDecision ?? "none",
+      room.finalCorrect == null ? "pending" : room.finalCorrect ? "true" : "false",
+    ].join(":");
+
+    if (announcementKey === lastAnnouncementKeyRef.current) {
+      return;
+    }
+
+    lastAnnouncementKeyRef.current = announcementKey;
+
+    if (room.phase === "propose") {
+      pushToast(`Round ${room.roundIndex}: ${proposerName} is proposer.`);
+      return;
+    }
+
+    if (room.phase === "counter") {
+      pushToast(`${counterName} is now counter.`);
+      return;
+    }
+
+    if (room.phase === "vote") {
+      pushToast("Voters: pick a side and submit.");
+      return;
+    }
+
+    if (room.phase === "reveal") {
+      if (isTieReveal) {
+        pushToast("No majority vote. Moving to next round.");
+      } else {
+        pushToast(room.finalCorrect ? "Correct! Moving to next round." : "Wrong answer. Game over.");
+      }
+    }
+  }, [
+    room.roundIndex,
+    room.phase,
+    room.proposerPlayerId,
+    room.counterPlayerId,
+    room.finalDecision,
+    room.finalCorrect,
+    isTieReveal,
+    proposerName,
+    counterName,
+  ]);
+
+  useEffect(() => {
+    if (room.phase !== "propose" || !isMeProposer || room.proposerPick) {
+      setProposerReason("");
+      setProposerSelection(null);
+      return;
+    }
+
+    setProposerReason(room.proposerReason ?? "");
+  }, [room.phase, room.proposerPick, room.proposerReason, isMeProposer]);
+
+  useEffect(() => {
+    if (room.phase !== "counter" || !isMeCounter || room.counterPick) {
+      setCounterReason("");
+      setCounterSelection(null);
+      return;
+    }
+
+    setCounterReason(room.counterReason ?? "");
+  }, [room.phase, room.counterPick, room.counterReason, isMeCounter]);
+
+  useEffect(() => {
+    if (room.phase !== "vote") {
+      setVoteSelectionOption(null);
+    }
+  }, [room.phase]);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6">
-      <div className="max-w-3xl mx-auto space-y-4">
-        <header className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4 flex items-center justify-between">
+    <div className="min-h-screen px-4 py-6 sm:px-6 lg:px-10">
+      {toast ? (
+        <div className="toast-pop fixed right-4 top-4 z-50 max-w-sm rounded-lg border border-cyan-300 bg-cyan-100 px-4 py-3 text-sm font-medium text-cyan-900 shadow-xl sm:right-6 sm:top-6">
+          {toast.message}
+        </div>
+      ) : null}
+
+      <div className="mx-auto max-w-7xl space-y-4">
+        <header className="app-card p-5 sm:p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Round {room.roundIndex}</h1>
-            <p className="text-sm text-zinc-400 mt-1">
-              Room: <span className="font-mono text-zinc-200">{room.roomId}</span>
+            <p className="app-pill inline-flex px-3 py-1 text-xs font-semibold text-cyan-800">
+              Live Match
+            </p>
+            <h1 className="mt-2 text-3xl font-bold text-slate-900">Round {room.roundIndex}</h1>
+            <p className="mt-1 text-sm text-slate-700">
+              Room: <span className="font-code font-semibold text-sky-800">{room.roomId}</span>
             </p>
           </div>
 
-          <div className="text-right">
-            <p className="text-xs text-zinc-400">Phase</p>
-            <p className="font-semibold uppercase">{room.phase}</p>
-            <p className="font-mono text-lg mt-1">{countdown}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-center">
+              <p className="text-[11px] uppercase tracking-wide text-sky-700">Phase</p>
+              <p className="font-semibold text-sky-900 uppercase">{room.phase}</p>
+            </div>
+
+            <div className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-center">
+              <p className="text-[11px] uppercase tracking-wide text-violet-700">Your Role</p>
+              <p className="font-semibold text-violet-900">{roleLabel}</p>
+            </div>
+
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center">
+              <p className="text-[11px] uppercase tracking-wide text-amber-700">Time Left</p>
+              <p className="font-code text-lg font-semibold text-amber-900">{countdown}</p>
+            </div>
+
             {onLeave ? (
               <button
                 onClick={onLeave}
-                className="mt-2 text-xs rounded-md border border-zinc-700 px-2 py-1 hover:bg-zinc-800"
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 Leave
               </button>
@@ -67,41 +320,416 @@ export default function RoundScreen({ room, meId, onLeave, error = null }: Round
         </header>
 
         {error ? (
-          <p className="rounded-md border border-red-900 bg-red-950/30 px-3 py-2 text-sm text-red-300">
+          <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
             {error}
           </p>
         ) : null}
 
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-          <p className="text-sm text-zinc-400">Proposer</p>
-          <p className="mt-1 text-base">
-            {isMeProposer ? "You are the proposer" : proposer?.name ?? "Unknown"}
-          </p>
-        </section>
+        <section className="round-board-grid">
+          <aside className="role-column app-card p-4 sm:p-5">
+            <div className="role-card proposer">
+              <div className="player-row">
+                <div className="avatar-shell avatar-proposer">{getInitials(proposerName)}</div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Proposer</p>
+                  <p className="font-semibold text-slate-900">{proposerName}</p>
+                  {proposerPlayer && !proposerPlayer.connected ? (
+                    <p className="text-xs text-rose-600">Offline</p>
+                  ) : null}
+                </div>
+              </div>
 
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-          <p className="text-sm text-zinc-400">Question</p>
-          <h2 className="mt-2 text-lg font-semibold">
-            {room.questionPrompt ?? `Question: ${room.questionId}`}
-          </h2>
+              <div className={`thought-bubble ${room.proposerPick ? "bubble-pop" : "placeholder"}`}>
+                {room.proposerPick
+                  ? `Option: ${formatChoice(room, room.proposerPick)}`
+                  : room.phase === "propose"
+                    ? "Thinking..."
+                    : "Waiting for proposer pick"}
+              </div>
 
-          {options.length > 0 ? (
-            <ul className="mt-3 space-y-2">
-              {options.map(([key, value]) => (
-                <li
-                  key={key}
-                  className="rounded-md border border-zinc-800 bg-zinc-950/40 px-3 py-2"
-                >
-                  <span className="font-mono mr-2">{key}.</span>
-                  {value}
+              <div
+                className={`thought-bubble secondary ${
+                  room.proposerReason ? "bubble-pop" : "placeholder"
+                }`}
+              >
+                {room.proposerReason ?? "No reason submitted"}
+              </div>
+
+              {canEnterProposerReason ? (
+                <textarea
+                  value={proposerReason}
+                  onChange={(event) => setProposerReason(event.target.value)}
+                  maxLength={280}
+                  placeholder="Your reason (optional)"
+                  className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+                />
+              ) : null}
+            </div>
+
+            <div className="role-card counter mt-3">
+              <div className="player-row">
+                <div className="avatar-shell avatar-counter">{getInitials(counterName)}</div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Counter</p>
+                  <p className="font-semibold text-slate-900">{counterName}</p>
+                  {counterPlayer && !counterPlayer.connected ? (
+                    <p className="text-xs text-rose-600">Offline</p>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className={`thought-bubble ${room.counterPick ? "bubble-pop" : "placeholder"}`}>
+                {room.counterPick
+                  ? `Option: ${formatChoice(room, room.counterPick)}`
+                  : room.phase === "counter"
+                    ? "Thinking..."
+                    : "Waiting for counter pick"}
+              </div>
+
+              <div
+                className={`thought-bubble secondary ${
+                  room.counterReason ? "bubble-pop" : "placeholder"
+                }`}
+              >
+                {room.counterReason ?? "No reason submitted"}
+              </div>
+
+              {canEnterCounterReason ? (
+                <textarea
+                  value={counterReason}
+                  onChange={(event) => setCounterReason(event.target.value)}
+                  maxLength={280}
+                  placeholder="Your reason (optional)"
+                  className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-100"
+                />
+              ) : null}
+            </div>
+          </aside>
+
+          <main className="app-card p-5 sm:p-6">
+            <h2 className="text-xl font-semibold text-slate-900">
+              {room.questionPrompt ?? `Question: ${room.questionId}`}
+            </h2>
+
+            {room.questionSnippet ? (
+              <pre className="mt-3 overflow-x-auto rounded-xl border border-slate-800 bg-slate-950 p-3 text-sm text-slate-100">
+                <code className="font-code">{room.questionSnippet}</code>
+              </pre>
+            ) : null}
+
+            {visibleOptionEntries.length > 0 ? (
+              <ul className="mt-4 space-y-3">
+                {visibleOptionEntries.map(([optionKey, optionText]) => {
+                  const isProposerOption = room.proposerPick === optionKey;
+                  const isSystemOption = room.systemAlternativePick === optionKey;
+                  const isCounterOption = !room.systemAlternativePick && room.counterPick === optionKey;
+
+                  const availableTargets: VoteTarget[] = [];
+                  if (room.phase === "vote") {
+                    if (isProposerOption) {
+                      availableTargets.push("proposer");
+                    }
+                    if (isSystemOption || (!room.systemAlternativePick && isCounterOption)) {
+                      availableTargets.push("counter");
+                    }
+                  } else {
+                    if (isProposerOption) {
+                      availableTargets.push("proposer");
+                    }
+                    if (isCounterOption) {
+                      availableTargets.push("counter");
+                    }
+                  }
+
+                  let selected = false;
+                  let cardClickable = false;
+                  let disabledReason = "";
+                  let accentClass = "border-slate-200 bg-white hover:border-slate-300";
+                  let onCardClick: (() => void) | undefined;
+
+                  if (room.phase === "propose") {
+                    if (!isMeProposer) {
+                      disabledReason = "Waiting for proposer action.";
+                    } else if (room.proposerPick) {
+                      selected = isProposerOption;
+                      disabledReason = "Proposer choice is locked.";
+                    } else {
+                      cardClickable = true;
+                      selected = proposerSelection === optionKey;
+                      accentClass = "border-emerald-300 bg-emerald-50 hover:border-emerald-400";
+                      onCardClick = () => setProposerSelection(optionKey);
+                    }
+                  } else if (room.phase === "counter") {
+                    if (!isMeCounter) {
+                      disabledReason = "Waiting for counter action.";
+                    } else if (room.counterPick) {
+                      selected = isCounterOption;
+                      disabledReason = "Counter choice is locked.";
+                    } else {
+                      cardClickable = true;
+                      selected = counterSelection === optionKey;
+                      accentClass = "border-fuchsia-300 bg-fuchsia-50 hover:border-fuchsia-400";
+                      onCardClick = () => setCounterSelection(optionKey);
+                    }
+                  } else if (room.phase === "vote") {
+                    if (!isMeVoter) {
+                      disabledReason = "Only voters can submit in vote phase.";
+                    } else if (availableTargets.length === 0) {
+                      disabledReason = "This option is not available to vote right now.";
+                    } else {
+                      cardClickable = true;
+                      selected = voteSelectionOption === optionKey;
+                      accentClass = "border-sky-300 bg-sky-50 hover:border-sky-400";
+                      onCardClick = () => {
+                        setVoteSelectionOption(optionKey);
+                      };
+                    }
+                  } else {
+                    disabledReason = "Waiting for next phase.";
+                  }
+
+                  return (
+                    <li
+                      key={optionKey}
+                      className={`rounded-xl border p-3 transition ${accentClass} ${
+                        cardClickable ? "cursor-pointer" : "opacity-90"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={onCardClick}
+                        disabled={!cardClickable}
+                        className="w-full text-left"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-sm font-medium text-slate-800">
+                            <span className="font-code mr-2">{optionKey}.</span>
+                            {optionText}
+                          </p>
+
+                          <div className="flex flex-wrap gap-1">
+                            {isProposerOption ? (
+                              <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-800">
+                                proposer
+                              </span>
+                            ) : null}
+                            {isCounterOption ? (
+                              <span className="rounded-full bg-fuchsia-100 px-2 py-0.5 text-[11px] font-semibold text-fuchsia-800">
+                                counter
+                              </span>
+                            ) : null}
+                            {isSystemOption ? (
+                              <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[11px] font-semibold text-cyan-800">
+                                system
+                              </span>
+                            ) : null}
+                            {selected ? (
+                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                selected
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </button>
+
+                      {!cardClickable && disabledReason ? (
+                        <p className="mt-2 text-xs text-slate-600">{disabledReason}</p>
+                      ) : null}
+
+                      {room.phase === "propose" && selected && !room.proposerPick ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!proposerSelection) {
+                              return;
+                            }
+
+                            onSubmitProposerPick?.(proposerSelection, proposerReason.trim() || undefined);
+                            pushToast(`Submitted proposer option ${proposerSelection}.`);
+                          }}
+                          className="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+                        >
+                          Submit as proposer
+                        </button>
+                      ) : null}
+
+                      {room.phase === "counter" && selected && !room.counterPick ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!counterSelection) {
+                              return;
+                            }
+
+                            onSubmitCounterPick?.(counterSelection, counterReason.trim() || undefined);
+                            pushToast(`Submitted counter option ${counterSelection}.`);
+                          }}
+                          className="mt-3 rounded-lg bg-fuchsia-600 px-3 py-2 text-sm font-semibold text-white hover:bg-fuchsia-500"
+                        >
+                          Submit as counter
+                        </button>
+                      ) : null}
+
+                      {room.phase === "vote" && selected && isMeVoter ? (
+                        <div className="mt-3 space-y-2">
+                          {availableTargets.length > 1 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {availableTargets.map((target) => {
+                                const buttonClass =
+                                  target === "proposer"
+                                    ? "bg-sky-600 hover:bg-sky-500"
+                                    : "bg-fuchsia-600 hover:bg-fuchsia-500";
+
+                                return (
+                                <button
+                                  key={target}
+                                  type="button"
+                                  onClick={() => {
+                                    onSubmitVote?.(target);
+                                    pushToast(`Submitted vote for ${target}.`);
+                                  }}
+                                  className={`rounded-full px-3 py-1.5 text-xs font-semibold text-white ${buttonClass}`}
+                                >
+                                  Submit vote for {target}
+                                </button>
+                                );
+                              })}
+                            </div>
+                          ) : null}
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const onlyTarget = availableTargets[0];
+                              if (!onlyTarget) return;
+                              onSubmitVote?.(onlyTarget);
+                              pushToast(`Submitted vote for ${onlyTarget}.`);
+                            }}
+                            disabled={availableTargets.length !== 1}
+                            className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {availableTargets.length === 1
+                              ? `Submit vote for ${availableTargets[0]}`
+                              : "Pick a side above"}
+                          </button>
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="mt-3 text-sm text-slate-600">Options appear when question data is loaded.</p>
+            )}
+
+            {room.phase === "vote" ? (
+              <p className="mt-3 rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs text-cyan-800">
+                {isSystemAlternativeRound
+                  ? "Proposer and counter selected the same option, so the system added one alternative. Vote between these two options."
+                  : "Vote between the proposer and counter options shown above."}
+              </p>
+            ) : null}
+
+            <div className="mt-4 grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-2">
+              <p className="text-sm text-slate-700">
+                Your vote: <span className="font-semibold">{myVote ?? "Not submitted"}</span>
+              </p>
+              <p className="text-sm text-slate-700">
+                Final decision:{" "}
+                <span className="font-semibold">
+                  {isTieReveal ? "No majority (tie)" : room.finalDecision ?? "Pending"}
+                </span>
+              </p>
+            </div>
+          </main>
+
+          <aside className="voter-column app-card p-4 sm:p-5">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Voters</h3>
+            <p className="mt-1 text-xs text-slate-500">Right side team votes for proposer or counter</p>
+
+            <ul className="mt-3 space-y-3">
+              {voters.length > 0 ? (
+                voters.map((player) => {
+                  const vote = room.votes[player.id];
+                  const voteLabel = vote ? `votes ${vote.toUpperCase()}` : "has not voted yet";
+
+                  return (
+                    <li key={player.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                      <div className="player-row">
+                        <div className="avatar-shell avatar-voter">{getInitials(player.name)}</div>
+                        <div>
+                          <p className="font-semibold text-slate-900">{player.name}</p>
+                          <p className="text-xs text-slate-500">{player.connected ? "Online" : "Offline"}</p>
+                        </div>
+                      </div>
+
+                      <div
+                        className={`thought-bubble vote ${vote ? "bubble-pop" : "placeholder"} mt-2 ${
+                          vote === "proposer"
+                            ? "vote-proposer"
+                            : vote === "counter"
+                              ? "vote-counter"
+                              : ""
+                        }`}
+                      >
+                        {voteLabel}
+                      </div>
+                    </li>
+                  );
+                })
+              ) : (
+                <li className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                  No voters available. Add more players for richer rounds.
                 </li>
-              ))}
+              )}
             </ul>
-          ) : (
-            <p className="mt-3 text-sm text-zinc-400">Options will appear when question data is available.</p>
-          )}
+          </aside>
         </section>
       </div>
+
+      {room.phase === "reveal" ? (
+        <div className="reveal-overlay">
+          <div className="reveal-card">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700">Round Reveal</p>
+            <h2 className="mt-2 text-2xl font-bold text-slate-900">
+              {isTieReveal
+                ? "No majority vote. Next round starts now."
+                : room.finalCorrect
+                  ? "Congratulations! You move on."
+                  : "Game over"}
+            </h2>
+
+            {isTieReveal ? (
+              <p className="mt-2 text-sm text-slate-700">
+                Votes were tied, so there is no majority winner for this round.
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-slate-700">
+                Majority selected <span className="font-semibold">{winningName}</span>
+                {winningPick ? ` with ${winningPick}. ${winningPickText}` : "."}
+              </p>
+            )}
+
+            {room.questionSnippet ? (
+              <pre className="mt-3 max-h-44 overflow-auto rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs text-slate-100">
+                <code className="font-code">{room.questionSnippet}</code>
+              </pre>
+            ) : null}
+
+            <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+              Correct option: <span className="font-semibold">{room.correctOption ? `${room.correctOption}. ${correctOptionText}` : "Unknown"}</span>
+            </p>
+
+            <p className="mt-2 text-xs text-slate-500">
+              {isTieReveal
+                ? "Round tied. Starting next round automatically."
+                : room.finalCorrect
+                  ? "Next round will begin automatically."
+                  : "Your room is now finished. Use Leave to return."}
+            </p>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

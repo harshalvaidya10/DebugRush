@@ -12,7 +12,6 @@ import type { StartGameInput, StartGameResult } from "../engine/gameEngine";
 type RegisterGameStartHandlerParams = {
     redis: Redis;
     io: Server<ClientToServerEvents, ServerToClientEvents>;
-    allowSinglePlayerStartInDev: boolean;
     socket: Socket<ClientToServerEvents, ServerToClientEvents>;
     startGame: (input: StartGameInput) => Promise<StartGameResult>;
 };
@@ -29,7 +28,6 @@ function emitActionError(
 export function registerGameStartHandler({
     redis,
     io,
-    allowSinglePlayerStartInDev,
     socket,
     startGame,
 }: RegisterGameStartHandlerParams) {
@@ -71,7 +69,6 @@ export function registerGameStartHandler({
             requesterPlayerId,
             redis,
             io,
-            allowSinglePlayerStartInDev,
         });
 
         if ("error" in result) {
