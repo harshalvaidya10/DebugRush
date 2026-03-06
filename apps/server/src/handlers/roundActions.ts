@@ -3,6 +3,7 @@ import {
     CounterSubmitPayloadSchema,
     FinalDecisionPayloadSchema,
     ProposerSubmitPayloadSchema,
+    RevealSkipPayloadSchema,
     VoteSubmitPayloadSchema,
     type ClientToServerEvents,
     type ServerToClientEvents,
@@ -13,6 +14,7 @@ import type {
     SubmitCounterPickInput,
     SubmitFinalDecisionInput,
     SubmitProposerPickInput,
+    SubmitRevealSkipInput,
     SubmitRoundActionResult,
     SubmitVoteInput,
 } from "../engine/gameEngine";
@@ -25,6 +27,7 @@ type RegisterRoundActionHandlersParams = {
     submitCounterPick: (input: SubmitCounterPickInput) => Promise<SubmitRoundActionResult>;
     submitVote: (input: SubmitVoteInput) => Promise<SubmitRoundActionResult>;
     submitFinalDecision: (input: SubmitFinalDecisionInput) => Promise<SubmitRoundActionResult>;
+    submitRevealSkip: (input: SubmitRevealSkipInput) => Promise<SubmitRoundActionResult>;
 };
 
 function emitActionError(
@@ -95,6 +98,7 @@ export function registerRoundActionHandlers({
     submitCounterPick,
     submitVote,
     submitFinalDecision,
+    submitRevealSkip,
 }: RegisterRoundActionHandlersParams) {
     socket.on("round:proposer:submit", async (payload) => {
         const parsed = ProposerSubmitPayloadSchema.safeParse(payload);
@@ -214,6 +218,35 @@ export function registerRoundActionHandlers({
                 roomId,
                 requesterPlayerId,
                 decision: parsed.data.decision,
+            })
+        );
+    });
+
+    socket.on("round:reveal:skip", async (payload) => {
+        const parsed = RevealSkipPayloadSchema.safeParse(payload);
+        if (!parsed.success) {
+            emitActionError(socket, "INVALID_PAYLOAD", "Invalid reveal skip payload.");
+            return;
+        }
+
+        const roomId = parsed.data.roomId.toUpperCase();
+        if (!validateRoomContext(socket, roomId)) {
+            return;
+        }
+
+        const requesterPlayerId = getRequesterPlayerId(socket);
+        if (!requesterPlayerId) {
+            emitActionError(socket, "UNAUTHORIZED", "Missing authenticated user identity.");
+            return;
+        }
+
+        await handleEngineResult(
+            socket,
+            submitRevealSkip({
+                redis,
+                io,
+                roomId,
+                requesterPlayerId,
             })
         );
     });

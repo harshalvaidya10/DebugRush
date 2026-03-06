@@ -46,7 +46,7 @@ export default function WelcomeScreen({
   };
 
   return (
-    <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-10">
+    <div className="screen-welcome min-h-screen px-4 py-8 sm:px-6 lg:px-10">
       <div className="mx-auto max-w-5xl grid gap-4 lg:grid-cols-[1.1fr_0.9fr] items-stretch">
         <section className="app-card p-7 sm:p-8">
           <p className="app-pill inline-flex items-center px-3 py-1 text-xs font-semibold text-cyan-800">
@@ -58,26 +58,6 @@ export default function WelcomeScreen({
             and win by logic plus speed.
           </p>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <div className="app-card-soft p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">Round-Robin Roles</p>
-              <p className="mt-1 text-sm text-slate-700">
-                Every player becomes proposer once and counter once.
-              </p>
-            </div>
-            <div className="app-card-soft p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Voting Logic</p>
-              <p className="mt-1 text-sm text-slate-700">
-                Same picks trigger a 50/50 vote. Different wrong picks end the match.
-              </p>
-            </div>
-            <div className="app-card-soft p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Match Length</p>
-              <p className="mt-1 text-sm text-slate-700">
-                Total rounds equal players at game start. Ties move to next round.
-              </p>
-            </div>
-          </div>
         </section>
 
         <section className="app-card p-6 sm:p-7">

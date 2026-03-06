@@ -798,6 +798,8 @@ export type SubmitFinalDecisionInput = RoundActionInputBase & {
     decision: VoteTarget;
 };
 
+export type SubmitRevealSkipInput = RoundActionInputBase;
+
 export type StartGameResult = EngineResult;
 
 export type AdvancePhaseInput = {
@@ -807,6 +809,7 @@ export type AdvancePhaseInput = {
     expectedPhase?: Phase;
     expectedPhaseEndsAtMs?: number;
     force?: boolean;
+    requesterPlayerId?: string;
 };
 
 export type AdvancePhaseResult = EngineResult;
@@ -1650,6 +1653,13 @@ export async function submitVote(input: SubmitVoteInput): Promise<SubmitRoundAct
                 return buildActionError("FORBIDDEN", "Counter cannot vote in this phase.");
             }
 
+            if (normalizedCurrent.votes[input.requesterPlayerId]) {
+                return buildActionError(
+                    "ALREADY_SUBMITTED",
+                    "Vote already submitted for this round."
+                );
+            }
+
             if (input.target === "counter") {
                 const hasCounterVoteTarget = Boolean(
                     normalizedCurrent.systemAlternativePick ||
@@ -1715,6 +1725,49 @@ export async function submitFinalDecision(
     );
 }
 
+export async function submitRevealSkip(
+    input: SubmitRevealSkipInput
+): Promise<SubmitRoundActionResult> {
+    const currentState = await getRoom(input.redis, input.roomId);
+    if (!currentState) {
+        return buildActionError("ROOM_NOT_FOUND", "Room not found.");
+    }
+
+    if (currentState.status !== "in_round") {
+        return buildActionError("INVALID_STATE", "Reveal skip is only available during active rounds.");
+    }
+
+    if (currentState.phase !== "reveal") {
+        return buildActionError("INVALID_PHASE", "Reveal skip is only available in reveal phase.");
+    }
+
+    const advanceResult = await advancePhase({
+        roomId: input.roomId,
+        redis: input.redis,
+        io: input.io,
+        expectedPhase: "reveal",
+        expectedPhaseEndsAtMs: currentState.phaseEndsAtMs,
+        force: true,
+        requesterPlayerId: input.requesterPlayerId,
+    });
+
+    if ("error" in advanceResult) {
+        if (advanceResult.error.code === "STALE_PHASE") {
+            const latestState = await getRoom(input.redis, input.roomId);
+            if (latestState && (latestState.status !== "in_round" || latestState.phase !== "reveal")) {
+                return {
+                    ok: true,
+                    state: latestState,
+                };
+            }
+        }
+
+        return advanceResult;
+    }
+
+    return advanceResult;
+}
+
 export async function advancePhase(input: AdvancePhaseInput): Promise<AdvancePhaseResult> {
     const mutationResult = await mutateRoomWithWatch(
         input.redis,
@@ -1733,6 +1786,13 @@ export async function advancePhase(input: AdvancePhaseInput): Promise<AdvancePha
                 current.phaseEndsAtMs !== input.expectedPhaseEndsAtMs
             ) {
                 return buildActionError("STALE_TIMER", "Phase end timestamp changed before timeout.");
+            }
+
+            if (input.requesterPlayerId) {
+                const playerCheck = ensureActiveRoundPlayer(current, input.requesterPlayerId);
+                if (playerCheck) {
+                    return playerCheck;
+                }
             }
 
             const now = Date.now();

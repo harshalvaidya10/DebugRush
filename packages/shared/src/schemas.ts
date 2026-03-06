@@ -60,6 +60,10 @@ export const FinalDecisionPayloadSchema = z.object({
     decision: VoteTargetSchema,
 });
 
+export const RevealSkipPayloadSchema = z.object({
+    roomId: RoomIdSchema,
+});
+
 export const ActionErrorSchema = z.object({
     code: z.string().min(1),
     message: z.string().min(1),
@@ -125,6 +129,7 @@ export type ProposerSubmitPayload = z.infer<typeof ProposerSubmitPayloadSchema>;
 export type CounterSubmitPayload = z.infer<typeof CounterSubmitPayloadSchema>;
 export type VoteSubmitPayload = z.infer<typeof VoteSubmitPayloadSchema>;
 export type FinalDecisionPayload = z.infer<typeof FinalDecisionPayloadSchema>;
+export type RevealSkipPayload = z.infer<typeof RevealSkipPayloadSchema>;
 export type ActionError = z.infer<typeof ActionErrorSchema>;
 export type Option = z.infer<typeof OptionSchema>;
 export type VoteTarget = z.infer<typeof VoteTargetSchema>;

@@ -223,6 +223,17 @@ export default function App() {
     });
   };
 
+  const handleSkipReveal = () => {
+    if (!room || room.status !== "in_round" || room.phase !== "reveal") {
+      return;
+    }
+
+    setJoinError(null);
+    socket.emit("round:reveal:skip", {
+      roomId: room.roomId,
+    });
+  };
+
   useEffect(() => {
     if (!myUserId || room || !savedSession || autoJoinAttempted) return;
     setAutoJoinAttempted(true);
@@ -254,6 +265,7 @@ export default function App() {
         onSubmitProposerPick={handleSubmitProposerPick}
         onSubmitCounterPick={handleSubmitCounterPick}
         onSubmitVote={handleSubmitVote}
+        onSkipReveal={handleSkipReveal}
         error={joinError}
       />
     );
