@@ -1,27 +1,10 @@
 import { useEffect, useState } from "react";
+import type { ActionError, AuthIdentityPayload, RoomState } from "@debugrush/shared";
 import WelcomeScreen from "./pages/WelcomeScreen";
 import LobbyScreen from "./pages/LobbyScreen";
-
-type Player = {
-  id: string;
-  name: string;
-  connected: boolean;
-  joinedAtMs: number;
-};
-
-type RoomState = {
-  schemaVersion: 1;
-  roomId: string;
-  hostPlayerId: string;
-  status: "lobby" | "round" | "reveal" | "ended";
-  players: Player[];
-  updatedAtMs: number;
-};
-
-type ActionError = {
-  code?: string;
-  message?: string;
-};
+import RoundScreen from "./pages/RoundScreen";
+import GameOverScreen from "./pages/GameOverScreen";
+import socket from "./socket";
 
 type SavedSession = {
   roomId: string;
@@ -43,12 +26,6 @@ function isSavedSession(value: unknown): value is SavedSession {
     typeof candidate.name === "string" &&
     candidate.name.trim().length > 0
   );
-}
-
-declare global {
-  interface Window {
-    __socket?: any;
-  }
 }
 
 function createRoomId() {
@@ -83,8 +60,6 @@ export default function App() {
   });
   const [autoJoinAttempted, setAutoJoinAttempted] = useState(false);
 
-  const socket = window.__socket;
-
   const clearLocalSessionAndReturnToWelcome = () => {
     try {
       roomSessionStorage.removeItem(ROOM_SESSION_KEY);
@@ -100,13 +75,11 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (!socket) return;
-
     const requestIdentity = () => {
       socket.emit("auth:whoami");
     };
 
-    const onIdentity = (payload: { userId?: string }) => {
+    const onIdentity = (payload: AuthIdentityPayload) => {
       if (typeof payload?.userId === "string" && payload.userId.length > 0) {
         setMyUserId(payload.userId);
         setJoinError((current) =>
@@ -145,14 +118,9 @@ export default function App() {
       socket.off("room:left", onRoomLeft);
       socket.off("action:error", onActionError);
     };
-  }, [socket]);
+  }, []);
 
   const emitJoin = (roomId: string, name: string) => {
-    if (!socket) {
-      setJoinError("Socket not connected");
-      return;
-    }
-
     const userId = myUserId;
     if (!userId) {
       socket.emit("auth:whoami");
@@ -199,11 +167,20 @@ export default function App() {
     }
   };
 
+  const handleStartGame = () => {
+    if (!room) {
+      return;
+    }
+
+    setJoinError(null);
+    socket.emit("game:start", { roomId: room.roomId });
+  };
+
   useEffect(() => {
-    if (!socket || !myUserId || room || !savedSession || autoJoinAttempted) return;
+    if (!myUserId || room || !savedSession || autoJoinAttempted) return;
     setAutoJoinAttempted(true);
     emitJoin(savedSession.roomId, savedSession.name);
-  }, [socket, myUserId, room, savedSession, autoJoinAttempted]);
+  }, [myUserId, room, savedSession, autoJoinAttempted]);
 
   const isIdentityReady = Boolean(myUserId);
   const welcomeError = joinError ?? (isIdentityReady ? null : "Waiting for identity...");
@@ -221,8 +198,35 @@ export default function App() {
     );
   }
 
-  // Keep your existing lobby UI here
+  if (room.status === "in_round") {
+    return (
+      <RoundScreen
+        room={room}
+        meId={myUserId ?? undefined}
+        onLeave={handleLeaveRoom}
+        error={joinError}
+      />
+    );
+  }
+
+  if (room.status === "game_over") {
+    return (
+      <GameOverScreen
+        room={room}
+        meId={myUserId ?? undefined}
+        onLeave={handleLeaveRoom}
+        error={joinError}
+      />
+    );
+  }
+
   return (
-    <LobbyScreen room={room} meId={myUserId ?? undefined} onLeave={handleLeaveRoom} />
+    <LobbyScreen
+      room={room}
+      meId={myUserId ?? undefined}
+      onLeave={handleLeaveRoom}
+      onStartGame={handleStartGame}
+      error={joinError}
+    />
   );
 }

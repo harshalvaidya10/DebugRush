@@ -1,27 +1,22 @@
-type Player = {
-    id: string;
-    name: string;
-    connected: boolean;
-    joinedAtMs: number;
-};
-
-type RoomState = {
-    schemaVersion: 1;
-    roomId: string;
-    hostPlayerId: string;
-    status: "lobby" | "round" | "reveal" | "ended";
-    players: Player[];
-    updatedAtMs: number;
-};
+import type { RoomState } from "@debugrush/shared";
 
 type LobbyScreenProps = {
     room: RoomState;
     meId?: string;
     onLeave?: () => void;
+    onStartGame?: () => void;
+    error?: string | null;
 };
 
-export default function LobbyScreen({ room, meId, onLeave }: LobbyScreenProps) {
+export default function LobbyScreen({
+    room,
+    meId,
+    onLeave,
+    onStartGame,
+    error = null,
+}: LobbyScreenProps) {
     const connectedPlayersCount = room.players.filter((p) => p.connected).length;
+    const canStartGame = meId === room.hostPlayerId && room.status === "lobby";
 
     return (
         <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6">
@@ -38,16 +33,32 @@ export default function LobbyScreen({ room, meId, onLeave }: LobbyScreenProps) {
                         <p className="text-xs text-zinc-400">
                             Status: <span className="text-zinc-200">{room.status}</span>
                         </p>
-                        {onLeave ? (
-                            <button
-                                onClick={onLeave}
-                                className="mt-2 text-xs rounded-md border border-zinc-700 px-2 py-1 hover:bg-zinc-800"
-                            >
-                                Leave
-                            </button>
-                        ) : null}
+                        <div className="mt-2 flex items-center gap-2 justify-end">
+                            {canStartGame && onStartGame ? (
+                                <button
+                                    onClick={onStartGame}
+                                    className="text-xs rounded-md border border-emerald-700 px-2 py-1 hover:bg-emerald-900/30"
+                                >
+                                    Start Game
+                                </button>
+                            ) : null}
+                            {onLeave ? (
+                                <button
+                                    onClick={onLeave}
+                                    className="text-xs rounded-md border border-zinc-700 px-2 py-1 hover:bg-zinc-800"
+                                >
+                                    Leave
+                                </button>
+                            ) : null}
+                        </div>
                     </div>
                 </header>
+
+                {error ? (
+                    <p className="mt-4 rounded-md border border-red-900 bg-red-950/30 px-3 py-2 text-sm text-red-300">
+                        {error}
+                    </p>
+                ) : null}
 
                 <section className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
                     <div className="flex items-center justify-between">

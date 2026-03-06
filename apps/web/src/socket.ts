@@ -1,4 +1,5 @@
-import { io } from "socket.io-client";
+import { io, type Socket } from "socket.io-client";
+import type { ClientToServerEvents, ServerToClientEvents } from "@debugrush/shared";
 
 const CLIENT_ID_KEY = "debugrush_client_id";
 
@@ -35,14 +36,20 @@ const socket = io(socketUrl, {
   auth: {
     clientId,
   },
-});
+}) as Socket<ServerToClientEvents, ClientToServerEvents>;
 
 (window as any).__socket = socket;
 
 socket.on("connect", () => {
-  console.log("connected to server:", socket.id, "clientId:", clientId);
+  if (import.meta.env.DEV) {
+    console.log("connected to server:", socket.id, "clientId:", clientId);
+  }
 });
 
 socket.on("connect_error", (error) => {
-  console.error("socket connection error:", error.message);
+  if (import.meta.env.DEV) {
+    console.error("socket connection error:", error.message);
+  }
 });
+
+export default socket;
