@@ -64,12 +64,19 @@ export function registerGameStartHandler({
             return;
         }
 
-        const result = await startGame({
-            roomId: requestedRoomId,
-            requesterPlayerId,
-            redis,
-            io,
-        });
+        let result: StartGameResult;
+        try {
+            result = await startGame({
+                roomId: requestedRoomId,
+                requesterPlayerId,
+                redis,
+                io,
+            });
+        } catch (err) {
+            console.error("game:start failed unexpectedly", err);
+            emitActionError(socket, "INTERNAL_ERROR", "Failed to start game.");
+            return;
+        }
 
         if ("error" in result) {
             emitActionError(socket, result.error.code, result.error.message);

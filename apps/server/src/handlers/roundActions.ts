@@ -75,12 +75,16 @@ async function handleEngineResult(
     socket: Socket<ClientToServerEvents, ServerToClientEvents>,
     resultPromise: Promise<SubmitRoundActionResult>
 ) {
-    const result = await resultPromise;
-    if (!("error" in result)) {
-        return;
+    try {
+        const result = await resultPromise;
+        if (!("error" in result)) {
+            return;
+        }
+        emitActionError(socket, result.error.code, result.error.message);
+    } catch (error) {
+        console.error("Engine error during round action:", error);
+        emitActionError(socket, "INTERNAL_ERROR", "An unexpected error occurred.");
     }
-
-    emitActionError(socket, result.error.code, result.error.message);
 }
 
 export function registerRoundActionHandlers({

@@ -38,7 +38,9 @@ const socket = io(socketUrl, {
   },
 }) as Socket<ServerToClientEvents, ClientToServerEvents>;
 
-(window as any).__socket = socket;
+if (import.meta.env.DEV) {
+  (window as any).__socket = socket;
+}
 
 socket.on("connect", () => {
   if (import.meta.env.DEV) {
