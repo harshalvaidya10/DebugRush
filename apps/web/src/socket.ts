@@ -41,11 +41,15 @@ const socket = io(socketUrl, {
 (window as any).__socket = socket;
 
 socket.on("connect", () => {
-  console.log("connected to server:", socket.id, "clientId:", clientId);
+  if (import.meta.env.DEV) {
+    console.log("connected to server:", socket.id, "clientId:", clientId);
+  }
 });
 
 socket.on("connect_error", (error) => {
-  console.error("socket connection error:", error.message);
+  if (import.meta.env.DEV) {
+    console.error("socket connection error:", error.message);
+  }
 });
 
 export default socket;

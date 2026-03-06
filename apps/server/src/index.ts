@@ -6,27 +6,12 @@ import { Server, type Socket } from "socket.io";
 import {
     JoinRoomSchema,
     type ClientToServerEvents,
-    type RoomState as SharedRoomState,
+    RoomStateSchema,
+    type RoomState,
     type ServerToClientEvents,
 } from "@debugrush/shared";
 import { startGame } from "./engine/gameEngine";
 import { registerGameStartHandler } from "./handlers/gameStart";
-
-type Player = {
-    id: string;
-    name: string;
-    connected: boolean;
-    joinedAtMs: number;
-};
-
-type RoomState = {
-    schemaVersion: 1;
-    roomId: string;
-    hostPlayerId: string;
-    status: "lobby" | "round" | "reveal" | "ended";
-    players: Player[];
-    updatedAtMs: number;
-};
 
 const PORT = Number(process.env.PORT ?? 4000);
 const REDIS_URL = process.env.REDIS_URL;
@@ -106,14 +91,50 @@ function sleep(ms: number) {
     });
 }
 
+function createLobbyRoomState(roomId: string, hostPlayerId: string, hostName: string, now: number): RoomState {
+    return {
+        schemaVersion: 1,
+        roomId,
+        hostPlayerId,
+        status: "lobby",
+        players: [
+            {
+                id: hostPlayerId,
+                name: hostName,
+                connected: true,
+                joinedAtMs: now,
+            },
+        ],
+        roundIndex: 0,
+        phase: "propose",
+        phaseEndsAtMs: 0,
+        questionId: "bootstrap",
+        questionPrompt: null,
+        questionOptions: null,
+        proposerPlayerId: hostPlayerId,
+        counterPlayerId: null,
+        proposerPick: null,
+        proposerReason: null,
+        counterPick: null,
+        counterReason: null,
+        votes: {},
+        finalDecision: null,
+        finalCorrect: null,
+        scoreboard: {
+            [hostPlayerId]: 0,
+        },
+        updatedAtMs: now,
+    };
+}
+
 function emitRoomState(roomId: string, state: RoomState) {
-    io.to(roomId).emit("room:state", state as unknown as SharedRoomState);
+    io.to(roomId).emit("room:state", state);
 }
 
 function getAuthenticatedUserId(
     socket: Socket<ClientToServerEvents, ServerToClientEvents>
 ): string | null {
-    // Server-trusted identity sources. Client payload alone is never trusted.
+    // Trusted identity sources for production traffic.
     const sessionUserId = (socket.request as any)?.session?.userId;
     if (typeof sessionUserId === "string" && sessionUserId.trim().length > 0) {
         return sessionUserId;
@@ -122,6 +143,12 @@ function getAuthenticatedUserId(
     const verifiedTokenSub = (socket.data as any)?.verifiedToken?.sub;
     if (typeof verifiedTokenSub === "string" && verifiedTokenSub.trim().length > 0) {
         return verifiedTokenSub;
+    }
+
+    // DEVELOPMENT ONLY: socket.data.userId is client-provided (handshake auth) and unverified.
+    // In production, require server-verified identity via session or verified token.
+    if (process.env.NODE_ENV === "production") {
+        return null;
     }
 
     const socketDataUserId = (socket.data as any)?.userId;
@@ -182,7 +209,14 @@ async function removePlayerFromRoomAtomic(roomId: string, playerId: string): Pro
                 return null;
             }
 
-            const nextState = JSON.parse(existingRaw) as RoomState;
+            const parsed = RoomStateSchema.safeParse(JSON.parse(existingRaw));
+            if (!parsed.success) {
+                console.error("Invalid room state while removing player:", parsed.error.issues);
+                await redis.unwatch();
+                return null;
+            }
+
+            const nextState = parsed.data;
             const leavingIndex = nextState.players.findIndex((p) => p.id === playerId);
 
             if (leavingIndex === -1) {
@@ -192,6 +226,8 @@ async function removePlayerFromRoomAtomic(roomId: string, playerId: string): Pro
 
             // "Hard leave": remove player from room list entirely.
             nextState.players.splice(leavingIndex, 1);
+            delete nextState.scoreboard[playerId];
+            delete nextState.votes[playerId];
             reassignHostIfNeeded(nextState, playerId);
             ensureHostExistsInPlayers(nextState);
             nextState.updatedAtMs = Date.now();
@@ -215,7 +251,7 @@ async function removePlayerFromRoomAtomic(roomId: string, playerId: string): Pro
 
 io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>) => {
     const handshakeClientId = (socket.handshake.auth as any)?.clientId;
-    // Dev identity for now. In production, this should come from real auth.
+    // Dev identity only. Production auth should come from session/token verification middleware.
     const userId =
         typeof handshakeClientId === "string" && handshakeClientId.trim().length > 0
             ? handshakeClientId
@@ -302,24 +338,20 @@ io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>)
 
                     if (!existingRaw) {
                         // Room does not exist yet -> create it and make joiner host.
-                        nextState = {
-                            schemaVersion: 1,
-                            roomId,
-                            hostPlayerId: authenticatedPlayerId,
-                            status: "lobby",
-                            players: [
-                                {
-                                    id: authenticatedPlayerId,
-                                    name,
-                                    connected: true,
-                                    joinedAtMs: now,
-                                },
-                            ],
-                            updatedAtMs: now,
-                        };
+                        nextState = createLobbyRoomState(roomId, authenticatedPlayerId, name, now);
                     } else {
                         // Room exists -> add player or mark reconnect.
-                        nextState = JSON.parse(existingRaw) as RoomState;
+                        const parsed = RoomStateSchema.safeParse(JSON.parse(existingRaw));
+                        if (!parsed.success) {
+                            await redis.unwatch();
+                            socket.emit("action:error", {
+                                code: "ROOM_CORRUPTED",
+                                message: "Room state is invalid. Please create a new room.",
+                            });
+                            return;
+                        }
+
+                        nextState = parsed.data;
                         // Cleanup from older behavior where disconnected players were retained.
                         nextState.players = nextState.players.filter((p) => p.connected);
                         const existingPlayer = nextState.players.find(
@@ -352,6 +384,7 @@ io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>)
                             existingPlayer.name = name;
                         }
 
+                        nextState.scoreboard[authenticatedPlayerId] ??= 0;
                         // Ensure host always points to a currently present player after cleanup/join updates.
                         ensureHostExistsInPlayers(nextState);
                         nextState.updatedAtMs = now;
@@ -416,7 +449,7 @@ io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>)
             leaveSucceeded = true;
             if (state) {
                 // Send update only to remaining players, not the leaver.
-                socket.to(roomId).emit("room:state", state as unknown as SharedRoomState);
+                socket.to(roomId).emit("room:state", state);
             }
         } catch (error) {
             if ((error as Error).message === "ROOM_BUSY") {
