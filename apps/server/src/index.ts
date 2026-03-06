@@ -3,7 +3,14 @@ import { randomUUID } from "crypto";
 import http from "http";
 import Redis from "ioredis";
 import { Server, type Socket } from "socket.io";
-import { JoinRoomSchema } from "@debugrush/shared";
+import {
+    JoinRoomSchema,
+    type ClientToServerEvents,
+    type RoomState as SharedRoomState,
+    type ServerToClientEvents,
+} from "@debugrush/shared";
+import { startGame } from "./engine/gameEngine";
+import { registerGameStartHandler } from "./handlers/gameStart";
 
 type Player = {
     id: string;
@@ -32,6 +39,10 @@ const MAX_JOIN_TX_RETRIES = 8;
 const DISCONNECT_REMOVE_GRACE_MS = 1500;
 const DISCONNECT_REMOVE_MAX_RETRIES = 4;
 const DISCONNECT_REMOVE_RETRY_BACKOFF_MS = 75;
+const allowSinglePlayerStartInDev =
+    process.env.NODE_ENV !== "production" &&
+    (process.env.ALLOW_SOLO_START_IN_DEV === "1" ||
+        process.env.ALLOW_SOLO_START_IN_DEV === "true");
 
 if (!REDIS_URL) {
     throw new Error("Missing REDIS_URL in apps/server/.env");
@@ -42,7 +53,7 @@ redis.ping().then((res) => console.log("Redis connected:", res));
 
 const httpServer = http.createServer();
 
-const io = new Server(httpServer, {
+const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
     cors: {
         origin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
     },
@@ -95,7 +106,13 @@ function sleep(ms: number) {
     });
 }
 
-function getAuthenticatedUserId(socket: Socket): string | null {
+function emitRoomState(roomId: string, state: RoomState) {
+    io.to(roomId).emit("room:state", state as unknown as SharedRoomState);
+}
+
+function getAuthenticatedUserId(
+    socket: Socket<ClientToServerEvents, ServerToClientEvents>
+): string | null {
     // Server-trusted identity sources. Client payload alone is never trusted.
     const sessionUserId = (socket.request as any)?.session?.userId;
     if (typeof sessionUserId === "string" && sessionUserId.trim().length > 0) {
@@ -196,7 +213,7 @@ async function removePlayerFromRoomAtomic(roomId: string, playerId: string): Pro
     throw new Error("ROOM_BUSY");
 }
 
-io.on("connection", (socket) => {
+io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>) => {
     const handshakeClientId = (socket.handshake.auth as any)?.clientId;
     // Dev identity for now. In production, this should come from real auth.
     const userId =
@@ -211,6 +228,14 @@ io.on("connection", (socket) => {
     socket.emit("auth:identity", { userId });
     socket.on("auth:whoami", () => {
         socket.emit("auth:identity", { userId: socket.data.userId });
+    });
+
+    registerGameStartHandler({
+        redis,
+        io,
+        allowSinglePlayerStartInDev,
+        socket,
+        startGame,
     });
 
     //Player joins a room
@@ -362,7 +387,7 @@ io.on("connection", (socket) => {
 
             // Join socket.io room and broadcast latest room state to everyone.
             socket.join(roomId);
-            io.to(roomId).emit("room:state", state);
+            emitRoomState(roomId, state);
         } catch (e) {
             console.error("room:join failed:", e);
             socket.emit("action:error", {
@@ -391,7 +416,7 @@ io.on("connection", (socket) => {
             leaveSucceeded = true;
             if (state) {
                 // Send update only to remaining players, not the leaver.
-                socket.to(roomId).emit("room:state", state);
+                socket.to(roomId).emit("room:state", state as unknown as SharedRoomState);
             }
         } catch (error) {
             if ((error as Error).message === "ROOM_BUSY") {
@@ -443,7 +468,7 @@ io.on("connection", (socket) => {
                 try {
                     const state = await removePlayerFromRoomAtomic(roomId, playerId);
                     if (state) {
-                        io.to(roomId).emit("room:state", state);
+                        emitRoomState(roomId, state);
                     }
                     removed = true;
                     break;
