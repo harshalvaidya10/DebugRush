@@ -48,151 +48,151 @@ const QUESTION_DECK = [
         },
         correct: "A" as const,
     },
-//     {
-//         id: "q-002",
-//         prompt: "Find the bug in this condition:",
-//         snippet: `function isAdmin(role) {
-//   if (role = "admin") {
-//     return true;
-//   }
-//   return false;
-// }`,
-//         options: {
-//             A: "Use role == 'admin'",
-//             B: "Use role === 'admin'",
-//             C: "Use role != 'admin'",
-//             D: "Remove return true",
-//         },
-//         correct: "B" as const,
-//     },
-//     {
-//         id: "q-003",
-//         prompt: "Why does this return undefined?",
-//         snippet: `const nums = [1, 2, 3];
-// const squared = nums.map(n => {
-//   n * n;
-// });`,
-//         options: {
-//             A: "Replace map with forEach",
-//             B: "Add return inside braces",
-//             C: "Use n ^ 2",
-//             D: "Use filter instead",
-//         },
-//         correct: "B" as const,
-//     },
-//     {
-//         id: "q-004",
-//         prompt: "Fix the async bug:",
-//         snippet: `async function loadUser() {
-//   const res = fetch("/api/user");
-//   const data = await res.json();
-//   return data;
-// }`,
-//         options: {
-//             A: "Remove async",
-//             B: "Add await before fetch",
-//             C: "Use JSON.parse(res)",
-//             D: "Replace json() with text()",
-//         },
-//         correct: "B" as const,
-//     },
-//     {
-//         id: "q-005",
-//         prompt: "Why does React not increment twice?",
-//         snippet: `const [count, setCount] = useState(0);
+    {
+        id: "q-002",
+        prompt: "Find the bug in this condition:",
+        snippet: `function isAdmin(role) {
+  if (role = "admin") {
+    return true;
+  }
+  return false;
+}`,
+        options: {
+            A: "Use role == 'admin'",
+            B: "Use role === 'admin'",
+            C: "Use role != 'admin'",
+            D: "Remove return true",
+        },
+        correct: "B" as const,
+    },
+    {
+        id: "q-003",
+        prompt: "Why does this return undefined?",
+        snippet: `const nums = [1, 2, 3];
+const squared = nums.map(n => {
+  n * n;
+});`,
+        options: {
+            A: "Replace map with forEach",
+            B: "Add return inside braces",
+            C: "Use n ^ 2",
+            D: "Use filter instead",
+        },
+        correct: "B" as const,
+    },
+    {
+        id: "q-004",
+        prompt: "Fix the async bug:",
+        snippet: `async function loadUser() {
+  const res = fetch("/api/user");
+  const data = await res.json();
+  return data;
+}`,
+        options: {
+            A: "Remove async",
+            B: "Add await before fetch",
+            C: "Use JSON.parse(res)",
+            D: "Replace json() with text()",
+        },
+        correct: "B" as const,
+    },
+    {
+        id: "q-005",
+        prompt: "Why does React not increment twice?",
+        snippet: `const [count, setCount] = useState(0);
 
-// function increment() {
-//   setCount(count + 1);
-//   setCount(count + 1);
-// }`,
-//         options: {
-//             A: "Use setCount(count + 2)",
-//             B: "Use functional state updates",
-//             C: "Use count++",
-//             D: "Wrap in useMemo",
-//         },
-//         correct: "B" as const,
-//     },
-//     {
-//         id: "q-006",
-//         prompt: "Fix the null safety issue:",
-//         snippet: `type User = {
-//   profile?: {
-//     name: string;
-//   };
-// };
+function increment() {
+  setCount(count + 1);
+  setCount(count + 1);
+}`,
+        options: {
+            A: "Use setCount(count + 2)",
+            B: "Use functional state updates",
+            C: "Use count++",
+            D: "Wrap in useMemo",
+        },
+        correct: "B" as const,
+    },
+    {
+        id: "q-006",
+        prompt: "Fix the null safety issue:",
+        snippet: `type User = {
+  profile?: {
+    name: string;
+  };
+};
 
-// function getName(user: User) {
-//   return user.profile.name.toUpperCase();
-// }`,
-//         options: {
-//             A: "Use optional chaining",
-//             B: "Use any type",
-//             C: "Remove profile?",
-//             D: "Use toLowerCase()",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-007",
-//         prompt: "Find the object mutation bug:",
-//         snippet: `const result = [];
-// const item = {};
+function getName(user: User) {
+  return user.profile.name.toUpperCase();
+}`,
+        options: {
+            A: "Use optional chaining",
+            B: "Use any type",
+            C: "Remove profile?",
+            D: "Use toLowerCase()",
+        },
+        correct: "A" as const,
+    },
+    {
+        id: "q-007",
+        prompt: "Find the object mutation bug:",
+        snippet: `const result = [];
+const item = {};
 
-// for (let i = 0; i < 3; i++) {
-//   item.index = i;
-//   result.push(item);
-// }`,
-//         options: {
-//             A: "Push i only",
-//             B: "Create a new object each loop",
-//             C: "Use Object.freeze(item)",
-//             D: "Use const i",
-//         },
-//         correct: "B" as const,
-//     },
-//     {
-//         id: "q-008",
-//         prompt: "Fix the SQL logic:",
-//         snippet: `SELECT * FROM users
-// WHERE active = true OR email LIKE '%@company.com';`,
-//         options: {
-//             A: "Replace OR with AND",
-//             B: "Remove WHERE",
-//             C: "Use NOT LIKE",
-//             D: "Use GROUP BY",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-009",
-//         prompt: "Why does this default value fail for empty string?",
-//         snippet: `function greet(name) {
-//   name = name || "Guest";
-//   return "Hello " + name;
-// }`,
-//         options: {
-//             A: "Use ?? instead of ||",
-//             B: "Use && instead of ||",
-//             C: "Always assign Guest",
-//             D: "Use trim() only",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-010",
-//         prompt: "Fix the Python default argument bug:",
-//         snippet: `def add_item(x, items=[]):
-//     items.append(x)
-//     return items`,
-//         options: {
-//             A: "Use items=None and initialize inside",
-//             B: "Use tuple instead",
-//             C: "Clear list each call",
-//             D: "Use global items",
-//         },
-//         correct: "A" as const,
-//     },
+for (let i = 0; i < 3; i++) {
+  item.index = i;
+  result.push(item);
+}`,
+        options: {
+            A: "Push i only",
+            B: "Create a new object each loop",
+            C: "Use Object.freeze(item)",
+            D: "Use const i",
+        },
+        correct: "B" as const,
+    },
+    {
+        id: "q-008",
+        prompt: "Fix the SQL logic:",
+        snippet: `SELECT * FROM users
+WHERE active = true OR email LIKE '%@company.com';`,
+        options: {
+            A: "Replace OR with AND",
+            B: "Remove WHERE",
+            C: "Use NOT LIKE",
+            D: "Use GROUP BY",
+        },
+        correct: "A" as const,
+    },
+    {
+        id: "q-009",
+        prompt: "Why does this default value fail for empty string?",
+        snippet: `function greet(name) {
+  name = name || "Guest";
+  return "Hello " + name;
+}`,
+        options: {
+            A: "Use ?? instead of ||",
+            B: "Use && instead of ||",
+            C: "Always assign Guest",
+            D: "Use trim() only",
+        },
+        correct: "A" as const,
+    },
+    {
+        id: "q-010",
+        prompt: "Fix the Python default argument bug:",
+        snippet: `def add_item(x, items=[]):
+    items.append(x)
+    return items`,
+        options: {
+            A: "Use items=None and initialize inside",
+            B: "Use tuple instead",
+            C: "Clear list each call",
+            D: "Use global items",
+        },
+        correct: "A" as const,
+    },
 //     {
 //         id: "q-011",
 //         prompt: "Fix the infinite loop bug:",
