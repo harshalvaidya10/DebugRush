@@ -34,6 +34,8 @@ const MAX_JOIN_TX_RETRIES = 8;
 const DISCONNECT_REMOVE_GRACE_MS = 1500;
 const DISCONNECT_REMOVE_MAX_RETRIES = 4;
 const DISCONNECT_REMOVE_RETRY_BACKOFF_MS = 75;
+const ALLOW_UNVERIFIED_CLIENT_IDENTITY =
+    process.env.ALLOW_UNVERIFIED_CLIENT_IDENTITY === "true";
 
 if (!REDIS_URL) {
     throw new Error("Missing REDIS_URL in apps/server/.env");
@@ -134,8 +136,9 @@ function getAuthenticatedUserId(
     }
 
     // DEVELOPMENT ONLY: socket.data.userId is client-provided (handshake auth) and unverified.
-    // In production, require server-verified identity via session or verified token.
-    if (process.env.NODE_ENV === "production") {
+    // In production, require server-verified identity via session or verified token
+    // unless explicitly allowed through env toggle for temporary deployments.
+    if (process.env.NODE_ENV === "production" && !ALLOW_UNVERIFIED_CLIENT_IDENTITY) {
         return null;
     }
 
