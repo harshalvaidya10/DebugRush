@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="DebugRush favicon">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#061126" />
+      <stop offset="60%" stop-color="#111a3a" />
+      <stop offset="100%" stop-color="#220f3c" />
+    </linearGradient>
+    <linearGradient id="stroke" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#22d3ee" />
+      <stop offset="100%" stop-color="#a855f7" />
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="58" height="58" rx="14" fill="url(#bg)" stroke="url(#stroke)" stroke-width="3" />
+  <text
+    x="32"
+    y="40"
+    text-anchor="middle"
+    font-size="26"
+    font-family="monospace"
+    font-weight="700"
+    fill="#67e8f9"
+  >
+    DR
+  </text>
+</svg>

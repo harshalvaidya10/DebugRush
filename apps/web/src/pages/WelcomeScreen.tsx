@@ -52,7 +52,7 @@ export default function WelcomeScreen({
           <p className="app-pill inline-flex items-center px-3 py-1 text-xs font-semibold text-cyan-800">
             Real-time Multiplayer Debug Game
           </p>
-          <h1 className="mt-4 text-4xl font-bold tracking-tight text-slate-900">DebugRush</h1>
+          <h1 className="mt-4 text-4xl font-bold tracking-tight text-slate-900">👾 DebugRush</h1>
           <p className="mt-3 max-w-xl text-slate-700 leading-relaxed">
             Join your team, race through code puzzles, defend your answer as proposer or counter,
             and win by logic plus speed.
@@ -101,7 +101,7 @@ export default function WelcomeScreen({
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 maxLength={20}
-                placeholder="e.g. Harshal"
+                placeholder="e.g. Taylor Swift"
                 className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
               />
             </div>
