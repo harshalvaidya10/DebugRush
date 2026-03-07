@@ -820,6 +820,24 @@ export type RecoverRoomTimersInput = {
     io: Server<ClientToServerEvents, ServerToClientEvents>;
 };
 
+const SCORE_RULES = {
+    roleCorrect: 4,
+    roleWrong: -4,
+    voterCorrect: 2,
+    voterWrong: -2,
+    tieCorrect: 1,
+    tieWrong: -1,
+    autoPickPenalty: -2,
+} as const;
+
+type ScoringMode = "normal" | "tie";
+
+type ScoreUpdate = {
+    scoreboard: Record<string, number>;
+    wrongAnswersCount: Record<string, number>;
+    scoreMilestonesMs: Record<string, Record<string, number>>;
+};
+
 function buildActionError(code: string, message: string): EngineFailure {
     return {
         ok: false,
@@ -843,6 +861,68 @@ function buildFreshScoreboardForPlayers(current: RoomState): Record<string, numb
 
     for (const player of current.players) {
         next[player.id] = 0;
+    }
+
+    return next;
+}
+
+function buildWrongAnswersCountForPlayers(current: RoomState): Record<string, number> {
+    const next: Record<string, number> = {};
+    const source = current.status !== "lobby" ? current.wrongAnswersCount : {};
+
+    for (const player of current.players) {
+        const existing = source[player.id];
+        next[player.id] = Number.isInteger(existing) && existing >= 0 ? existing : 0;
+    }
+
+    return next;
+}
+
+function buildFreshWrongAnswersCountForPlayers(current: RoomState): Record<string, number> {
+    const next: Record<string, number> = {};
+
+    for (const player of current.players) {
+        next[player.id] = 0;
+    }
+
+    return next;
+}
+
+function buildScoreMilestonesForPlayers(
+    current: RoomState
+): Record<string, Record<string, number>> {
+    const next: Record<string, Record<string, number>> = {};
+    const source = current.status !== "lobby" ? current.scoreMilestonesMs : {};
+
+    for (const player of current.players) {
+        const milestones = source[player.id];
+        if (!milestones || typeof milestones !== "object") {
+            next[player.id] = {};
+            continue;
+        }
+
+        const normalized: Record<string, number> = {};
+        for (const [scoreKey, reachedAtMs] of Object.entries(milestones)) {
+            if (Number.isInteger(reachedAtMs) && reachedAtMs >= 0) {
+                normalized[scoreKey] = reachedAtMs;
+            }
+        }
+        next[player.id] = normalized;
+    }
+
+    return next;
+}
+
+function buildFreshScoreMilestonesForPlayers(
+    current: RoomState,
+    now: number
+): Record<string, Record<string, number>> {
+    const next: Record<string, Record<string, number>> = {};
+
+    for (const player of current.players) {
+        next[player.id] = {
+            "0": now,
+        };
     }
 
     return next;
@@ -1097,37 +1177,107 @@ function computeFinalCorrect(state: InRoundRoomState, finalDecision: VoteTarget)
     return selectedPick === question.correct;
 }
 
+function applyScoreDelta(update: ScoreUpdate, playerId: string, delta: number, now: number) {
+    if (update.scoreboard[playerId] === undefined) {
+        return;
+    }
+
+    if (delta === 0) {
+        return;
+    }
+
+    const previousScore = update.scoreboard[playerId] ?? 0;
+    const nextScore = previousScore + delta;
+    update.scoreboard[playerId] = nextScore;
+
+    if (delta < 0) {
+        update.wrongAnswersCount[playerId] = (update.wrongAnswersCount[playerId] ?? 0) + 1;
+    }
+
+    const nextScoreKey = String(nextScore);
+    const milestones = update.scoreMilestonesMs[playerId] ?? {};
+    if (milestones[nextScoreKey] === undefined) {
+        milestones[nextScoreKey] = now;
+    }
+    update.scoreMilestonesMs[playerId] = milestones;
+}
+
+function resolveRoleDelta(
+    isCorrect: boolean,
+    isAutoPicked: boolean,
+    mode: ScoringMode
+): number {
+    if (isAutoPicked) {
+        return SCORE_RULES.autoPickPenalty;
+    }
+
+    if (mode === "tie") {
+        return isCorrect ? SCORE_RULES.tieCorrect : SCORE_RULES.tieWrong;
+    }
+
+    return isCorrect ? SCORE_RULES.roleCorrect : SCORE_RULES.roleWrong;
+}
+
+function resolveVoterDelta(isCorrect: boolean, mode: ScoringMode): number {
+    if (mode === "tie") {
+        return isCorrect ? SCORE_RULES.tieCorrect : SCORE_RULES.tieWrong;
+    }
+
+    return isCorrect ? SCORE_RULES.voterCorrect : SCORE_RULES.voterWrong;
+}
+
 function applyRoundScoring(
     state: InRoundRoomState,
-    finalDecision: VoteTarget,
-    finalCorrect: boolean
-): Record<string, number> {
-    const nextScoreboard = buildScoreboardForPlayers(state);
-    const selectedPlayerId = getRoundPlayerIdByTarget(state, finalDecision);
-
-    if (finalCorrect) {
-        if (selectedPlayerId) {
-            nextScoreboard[selectedPlayerId] = (nextScoreboard[selectedPlayerId] ?? 0) + 3;
-        }
-        for (const [voterPlayerId, target] of Object.entries(state.votes)) {
-            if (target === finalDecision && nextScoreboard[voterPlayerId] !== undefined) {
-                nextScoreboard[voterPlayerId] += 1;
-            }
-        }
-
-        return nextScoreboard;
-    }
-
-    const oppositeTarget: VoteTarget = finalDecision === "proposer" ? "counter" : "proposer";
-    const oppositePlayerId = getRoundPlayerIdByTarget(state, oppositeTarget);
-    const oppositePick = getRoundPickByTarget(state, oppositeTarget);
+    mode: ScoringMode,
+    now: number
+): ScoreUpdate {
+    const update: ScoreUpdate = {
+        scoreboard: buildScoreboardForPlayers(state),
+        wrongAnswersCount: buildWrongAnswersCountForPlayers(state),
+        scoreMilestonesMs: buildScoreMilestonesForPlayers(state),
+    };
     const question = getQuestionById(state.questionId);
-
-    if (oppositePlayerId && question && oppositePick === question.correct) {
-        nextScoreboard[oppositePlayerId] = (nextScoreboard[oppositePlayerId] ?? 0) + 2;
+    if (!question) {
+        return update;
     }
 
-    return nextScoreboard;
+    if (state.proposerPick) {
+        const proposerIsCorrect = state.proposerPick === question.correct;
+        const proposerDelta = resolveRoleDelta(
+            proposerIsCorrect,
+            state.proposerAutoPicked,
+            mode
+        );
+        applyScoreDelta(update, state.proposerPlayerId, proposerDelta, now);
+    }
+
+    if (state.counterPlayerId && state.counterPick) {
+        const counterIsCorrect = state.counterPick === question.correct;
+        const counterDelta = resolveRoleDelta(counterIsCorrect, state.counterAutoPicked, mode);
+        applyScoreDelta(update, state.counterPlayerId, counterDelta, now);
+    }
+
+    for (const player of state.players) {
+        const voterPlayerId = player.id;
+        if (voterPlayerId === state.proposerPlayerId || voterPlayerId === state.counterPlayerId) {
+            continue;
+        }
+
+        const voteTarget = state.votes[voterPlayerId];
+        if (!voteTarget) {
+            continue;
+        }
+
+        const votedPick = getRoundPickByTarget(state, voteTarget);
+        if (!votedPick) {
+            continue;
+        }
+
+        const voterDelta = resolveVoterDelta(votedPick === question.correct, mode);
+        applyScoreDelta(update, voterPlayerId, voterDelta, now);
+    }
+
+    return update;
 }
 
 function ensureActiveRoundPlayer(state: InRoundRoomState, requesterPlayerId: string): EngineFailure | null {
@@ -1439,6 +1589,8 @@ export async function startGame(input: StartGameInput): Promise<StartGameResult>
                 correctOption: null,
                 proposerPlayerId: roles.proposerPlayerId,
                 counterPlayerId: roles.counterPlayerId,
+                proposerAutoPicked: false,
+                counterAutoPicked: false,
                 proposerPick: null,
                 proposerReason: null,
                 counterPick: null,
@@ -1448,6 +1600,8 @@ export async function startGame(input: StartGameInput): Promise<StartGameResult>
                 finalDecision: null,
                 finalCorrect: null,
                 scoreboard: buildFreshScoreboardForPlayers(current),
+                wrongAnswersCount: buildFreshWrongAnswersCountForPlayers(current),
+                scoreMilestonesMs: buildFreshScoreMilestonesForPlayers(current, now),
                 updatedAtMs: now,
             };
 
@@ -1807,6 +1961,7 @@ export async function advancePhase(input: AdvancePhaseInput): Promise<AdvancePha
                     ...workingState,
                     proposerPick: pickRandomItem(ALL_OPTIONS),
                     proposerReason: current.proposerReason ?? "Auto-picked due to proposer timeout.",
+                    proposerAutoPicked: true,
                 };
             }
 
@@ -1815,6 +1970,7 @@ export async function advancePhase(input: AdvancePhaseInput): Promise<AdvancePha
                     ...workingState,
                     counterPick: pickRandomItem(ALL_OPTIONS),
                     counterReason: workingState.counterReason ?? "Auto-picked due to counter timeout.",
+                    counterAutoPicked: true,
                 };
             }
 
@@ -1822,6 +1978,7 @@ export async function advancePhase(input: AdvancePhaseInput): Promise<AdvancePha
                 const correctOption = getCorrectOptionForQuestion(workingState.questionId);
                 const voteOutcome = resolveVoteOutcome(workingState);
                 if (voteOutcome.kind === "tie") {
+                    const tieScoreUpdate = applyRoundScoring(workingState, "tie", now);
                     return {
                         ok: true,
                         state: {
@@ -1831,6 +1988,9 @@ export async function advancePhase(input: AdvancePhaseInput): Promise<AdvancePha
                             finalDecision: null,
                             finalCorrect: null,
                             correctOption,
+                            scoreboard: tieScoreUpdate.scoreboard,
+                            wrongAnswersCount: tieScoreUpdate.wrongAnswersCount,
+                            scoreMilestonesMs: tieScoreUpdate.scoreMilestonesMs,
                             updatedAtMs: now,
                         },
                     };
@@ -1838,7 +1998,7 @@ export async function advancePhase(input: AdvancePhaseInput): Promise<AdvancePha
 
                 const resolvedDecision = voteOutcome.decision;
                 const finalCorrect = computeFinalCorrect(workingState, resolvedDecision);
-                const nextScoreboard = applyRoundScoring(workingState, resolvedDecision, finalCorrect);
+                const scoreUpdate = applyRoundScoring(workingState, "normal", now);
 
                 if (!finalCorrect) {
                     return {
@@ -1851,7 +2011,9 @@ export async function advancePhase(input: AdvancePhaseInput): Promise<AdvancePha
                             finalDecision: resolvedDecision,
                             finalCorrect,
                             correctOption,
-                            scoreboard: nextScoreboard,
+                            scoreboard: scoreUpdate.scoreboard,
+                            wrongAnswersCount: scoreUpdate.wrongAnswersCount,
+                            scoreMilestonesMs: scoreUpdate.scoreMilestonesMs,
                             updatedAtMs: now,
                         },
                     };
@@ -1866,7 +2028,9 @@ export async function advancePhase(input: AdvancePhaseInput): Promise<AdvancePha
                         finalDecision: resolvedDecision,
                         finalCorrect,
                         correctOption,
-                        scoreboard: nextScoreboard,
+                        scoreboard: scoreUpdate.scoreboard,
+                        wrongAnswersCount: scoreUpdate.wrongAnswersCount,
+                        scoreMilestonesMs: scoreUpdate.scoreMilestonesMs,
                         updatedAtMs: now,
                     },
                 };
@@ -1875,7 +2039,7 @@ export async function advancePhase(input: AdvancePhaseInput): Promise<AdvancePha
             if (workingState.phase === "final") {
                 const resolvedDecision = resolveFinalDecision(workingState);
                 const finalCorrect = computeFinalCorrect(workingState, resolvedDecision);
-                const nextScoreboard = applyRoundScoring(workingState, resolvedDecision, finalCorrect);
+                const scoreUpdate = applyRoundScoring(workingState, "normal", now);
                 const correctOption = getCorrectOptionForQuestion(workingState.questionId);
 
                 if (!finalCorrect) {
@@ -1889,7 +2053,9 @@ export async function advancePhase(input: AdvancePhaseInput): Promise<AdvancePha
                             finalDecision: resolvedDecision,
                             finalCorrect,
                             correctOption,
-                            scoreboard: nextScoreboard,
+                            scoreboard: scoreUpdate.scoreboard,
+                            wrongAnswersCount: scoreUpdate.wrongAnswersCount,
+                            scoreMilestonesMs: scoreUpdate.scoreMilestonesMs,
                             updatedAtMs: now,
                         },
                     };
@@ -1904,7 +2070,9 @@ export async function advancePhase(input: AdvancePhaseInput): Promise<AdvancePha
                         finalDecision: resolvedDecision,
                         finalCorrect,
                         correctOption,
-                        scoreboard: nextScoreboard,
+                        scoreboard: scoreUpdate.scoreboard,
+                        wrongAnswersCount: scoreUpdate.wrongAnswersCount,
+                        scoreMilestonesMs: scoreUpdate.scoreMilestonesMs,
                         updatedAtMs: now,
                     },
                 };
@@ -2002,6 +2170,8 @@ export async function advancePhase(input: AdvancePhaseInput): Promise<AdvancePha
                         correctOption: null,
                         proposerPlayerId: nextRoles.proposerPlayerId,
                         counterPlayerId: nextRoles.counterPlayerId,
+                        proposerAutoPicked: false,
+                        counterAutoPicked: false,
                         proposerPick: null,
                         proposerReason: null,
                         counterPick: null,
@@ -2011,12 +2181,15 @@ export async function advancePhase(input: AdvancePhaseInput): Promise<AdvancePha
                         finalDecision: null,
                         finalCorrect: null,
                         scoreboard: buildScoreboardForPlayers(workingState),
+                        wrongAnswersCount: buildWrongAnswersCountForPlayers(workingState),
+                        scoreMilestonesMs: buildScoreMilestonesForPlayers(workingState),
                         updatedAtMs: now,
                     },
                 };
             }
 
             if (workingState.phase === "counter" && shouldEndGameImmediatelyForDifferentWrongPicks(workingState)) {
+                const scoreUpdate = applyRoundScoring(workingState, "normal", now);
                 return {
                     ok: true,
                     state: {
@@ -2028,6 +2201,9 @@ export async function advancePhase(input: AdvancePhaseInput): Promise<AdvancePha
                         finalCorrect: false,
                         correctOption: getCorrectOptionForQuestion(workingState.questionId),
                         systemAlternativePick: null,
+                        scoreboard: scoreUpdate.scoreboard,
+                        wrongAnswersCount: scoreUpdate.wrongAnswersCount,
+                        scoreMilestonesMs: scoreUpdate.scoreMilestonesMs,
                         updatedAtMs: now,
                     },
                 };

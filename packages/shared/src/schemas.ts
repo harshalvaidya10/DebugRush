@@ -108,6 +108,8 @@ export const InRoundRoomStateSchema = RoomStateBaseSchema.extend({
     correctOption: OptionSchema.nullable().catch(null),
     proposerPlayerId: PlayerIdSchema,
     counterPlayerId: PlayerIdSchema.nullable(),
+    proposerAutoPicked: z.boolean().catch(false),
+    counterAutoPicked: z.boolean().catch(false),
     proposerPick: OptionSchema.nullable(),
     proposerReason: z.string().nullable(),
     counterPick: OptionSchema.nullable(),
@@ -116,6 +118,10 @@ export const InRoundRoomStateSchema = RoomStateBaseSchema.extend({
     votes: z.record(z.string(), VoteTargetSchema),
     finalDecision: VoteTargetSchema.nullable(),
     finalCorrect: z.boolean().nullable(),
+    wrongAnswersCount: z.record(z.string(), z.number().int().nonnegative()).catch({}),
+    scoreMilestonesMs: z
+        .record(z.string(), z.record(z.string(), z.number().int().nonnegative()))
+        .catch({}),
 });
 
 export const RoomStateSchema = z.discriminatedUnion("status", [
