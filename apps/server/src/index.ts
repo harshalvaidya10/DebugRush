@@ -22,6 +22,7 @@ import {
 import { registerGameStartHandler } from "./handlers/gameStart";
 import { registerRoundActionHandlers } from "./handlers/roundActions";
 import { ROOM_TTL_SECONDS } from "./repo/roomsRepo";
+import { clearRoomTimer } from "./timers/roomTimers";
 
 const PORT = Number(process.env.PORT ?? 4000);
 const REDIS_URL = process.env.REDIS_URL;
@@ -218,6 +219,19 @@ async function removePlayerFromRoomAtomic(roomId: string, playerId: string): Pro
                 delete nextState.votes[playerId];
                 delete nextState.wrongAnswersCount[playerId];
                 delete nextState.scoreMilestonesMs[playerId];
+
+                // Strict rule: if any player leaves during an active match, end the game immediately.
+                if (nextState.status === "in_round") {
+                    nextState.status = "game_over";
+                    nextState.phase = "reveal";
+                    nextState.phaseEndsAtMs = 0;
+                    nextState.finalDecision = null;
+                    nextState.finalCorrect = false;
+                    nextState.correctOption = null;
+                    nextState.questionPrompt = null;
+                    nextState.questionSnippet = null;
+                    nextState.questionOptions = null;
+                }
             }
             reassignHostIfNeeded(nextState, playerId);
             ensureHostExistsInPlayers(nextState);
@@ -464,6 +478,9 @@ io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>)
             // null means room/player already gone; treat as completed cleanup.
             leaveSucceeded = true;
             if (state) {
+                if (state.status !== "in_round") {
+                    clearRoomTimer(roomId);
+                }
                 // Send update only to remaining players, not the leaver.
                 socket.to(roomId).emit("room:state", state);
             }
@@ -517,6 +534,9 @@ io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>)
                 try {
                     const state = await removePlayerFromRoomAtomic(roomId, playerId);
                     if (state) {
+                        if (state.status !== "in_round") {
+                            clearRoomTimer(roomId);
+                        }
                         emitRoomState(roomId, state);
                     }
                     removed = true;

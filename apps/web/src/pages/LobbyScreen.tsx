@@ -29,7 +29,7 @@ export default function LobbyScreen({
                 <p className="app-pill inline-flex px-3 py-1 text-xs font-semibold text-cyan-800">
                   Lobby Ready
                 </p>
-                <h1 className="mt-3 text-3xl font-bold text-slate-900">DebugRush Lobby</h1>
+                <h1 className="mt-3 text-3xl font-bold text-slate-900">👾 DebugRush Lobby</h1>
                 <p className="mt-2 text-sm text-slate-700">
                   Share this room code with players and start when everyone is in.
                 </p>
@@ -176,6 +176,7 @@ export default function LobbyScreen({
               <div className="mt-1 space-y-1 leading-relaxed">
                 <p>If proposer and counter pick the same option, system adds one extra option (50/50 choice).</p>
                 <p>If proposer and counter pick different options and both are wrong, game ends immediately.</p>
+                <p>If any player leaves during an active match, game ends immediately for the room.</p>
                 <p>If votes are equal, round is a tie and match moves to next round.</p>
                 <p>If a voter does not vote, that voter gets 0 for that round.</p>
               </div>

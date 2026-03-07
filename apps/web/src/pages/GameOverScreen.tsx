@@ -42,6 +42,12 @@ export default function GameOverScreen({
   });
   const correctOptionText = room.correctOption ? room.questionOptions?.[room.correctOption] ?? "" : "";
   const isHost = Boolean(meId) && meId === room.hostPlayerId;
+  const isPlayerLeftEnd =
+    room.finalDecision === null &&
+    room.finalCorrect === false &&
+    room.correctOption === null &&
+    room.questionPrompt === null &&
+    room.questionOptions === null;
   const isTieResult = room.finalDecision === null && room.finalCorrect === null;
   const isBothWrongBeforeVote =
     room.finalDecision === null &&
@@ -65,7 +71,9 @@ export default function GameOverScreen({
         ? "System Alternative"
         : room.players.find((player) => player.id === room.counterPlayerId)?.name ?? "Counter"
       : room.players.find((player) => player.id === room.proposerPlayerId)?.name ?? "Proposer";
-  const headline = isBothWrongBeforeVote
+  const headline = isPlayerLeftEnd
+    ? "Game ended because a player left."
+    : isBothWrongBeforeVote
     ? "Both proposed answers were wrong. Game ended before voting."
     : isTieResult
       ? "No majority vote (draw). Match ended."
@@ -121,44 +129,56 @@ export default function GameOverScreen({
           </p>
         ) : null}
 
-        <section className="app-card p-6 sm:p-7">
-          <div className="final-reveal rounded-xl border border-rose-200 bg-rose-50/80 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-700">Final Reveal</p>
-            <h2 className="mt-2 text-2xl font-bold text-slate-900">{headline}</h2>
-
-            <p className="mt-2 text-sm text-slate-700">{room.questionPrompt ?? `Question: ${room.questionId}`}</p>
-
-            {room.questionSnippet ? (
-              <pre className="mt-3 max-h-48 overflow-auto rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs text-slate-100">
-                <code className="font-code">{room.questionSnippet}</code>
-              </pre>
-            ) : null}
-
-            <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-              Correct option: <span className="font-semibold">{room.correctOption ? `${room.correctOption}. ${correctOptionText}` : "Unknown"}</span>
-            </p>
-
-            {isTieResult ? (
-              <p className="mt-2 text-sm text-slate-700">
-                Round result was a tie (no majority). If this was the final allowed round, the match ends here.
+        {isPlayerLeftEnd ? (
+          <section className="app-card p-6 sm:p-7">
+            <div className="rounded-xl border border-amber-300 bg-amber-100/20 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-400">Match Ended</p>
+              <h2 className="mt-2 text-2xl font-bold text-slate-100">{headline}</h2>
+              <p className="mt-2 text-sm text-slate-300">
+                A player disconnected or left during the round, so the match was ended immediately.
               </p>
-            ) : isBothWrongBeforeVote ? (
-              <p className="mt-2 text-sm text-slate-700">
-                Proposer chose <span className="font-semibold">{room.proposerPick ?? "N/A"}</span> and
-                counter chose <span className="font-semibold"> {room.counterPick ?? "N/A"}</span>, and both were incorrect.
+            </div>
+          </section>
+        ) : (
+          <section className="app-card p-6 sm:p-7">
+            <div className="final-reveal rounded-xl border border-rose-200 bg-rose-50/80 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-700">Final Reveal</p>
+              <h2 className="mt-2 text-2xl font-bold text-slate-900">{headline}</h2>
+
+              <p className="mt-2 text-sm text-slate-700">{room.questionPrompt ?? `Question: ${room.questionId}`}</p>
+
+              {room.questionSnippet ? (
+                <pre className="mt-3 max-h-48 overflow-auto rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs text-slate-100">
+                  <code className="font-code">{room.questionSnippet}</code>
+                </pre>
+              ) : null}
+
+              <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                Correct option: <span className="font-semibold">{room.correctOption ? `${room.correctOption}. ${correctOptionText}` : "Unknown"}</span>
               </p>
-            ) : room.finalDecision ? (
-              <p className="mt-2 text-sm text-slate-700">
-                Majority selected <span className="font-semibold">{selectedName}</span>
-                {selectedPick ? ` with ${selectedPick}. ${selectedPickText}` : "."}
-              </p>
-            ) : (
-              <p className="mt-2 text-sm text-slate-700">
-                No final side was selected for this round.
-              </p>
-            )}
-          </div>
-        </section>
+
+              {isTieResult ? (
+                <p className="mt-2 text-sm text-slate-700">
+                  Round result was a tie (no majority). If this was the final allowed round, the match ends here.
+                </p>
+              ) : isBothWrongBeforeVote ? (
+                <p className="mt-2 text-sm text-slate-700">
+                  Proposer chose <span className="font-semibold">{room.proposerPick ?? "N/A"}</span> and
+                  counter chose <span className="font-semibold"> {room.counterPick ?? "N/A"}</span>, and both were incorrect.
+                </p>
+              ) : room.finalDecision ? (
+                <p className="mt-2 text-sm text-slate-700">
+                  Majority selected <span className="font-semibold">{selectedName}</span>
+                  {selectedPick ? ` with ${selectedPick}. ${selectedPickText}` : "."}
+                </p>
+              ) : (
+                <p className="mt-2 text-sm text-slate-700">
+                  No final side was selected for this round.
+                </p>
+              )}
+            </div>
+          </section>
+        )}
 
         <section className="app-card p-6 sm:p-7">
           <h2 className="text-xl font-semibold text-slate-900">Final Scoreboard</h2>
