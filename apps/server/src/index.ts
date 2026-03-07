@@ -216,6 +216,8 @@ async function removePlayerFromRoomAtomic(roomId: string, playerId: string): Pro
             delete nextState.scoreboard[playerId];
             if (nextState.status !== "lobby") {
                 delete nextState.votes[playerId];
+                delete nextState.wrongAnswersCount[playerId];
+                delete nextState.scoreMilestonesMs[playerId];
             }
             reassignHostIfNeeded(nextState, playerId);
             ensureHostExistsInPlayers(nextState);
@@ -393,6 +395,12 @@ io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>)
                         }
 
                         nextState.scoreboard[authenticatedPlayerId] ??= 0;
+                        if (nextState.status !== "lobby") {
+                            nextState.wrongAnswersCount[authenticatedPlayerId] ??= 0;
+                            nextState.scoreMilestonesMs[authenticatedPlayerId] ??= {
+                                [String(nextState.scoreboard[authenticatedPlayerId] ?? 0)]: now,
+                            };
+                        }
                         // Ensure host always points to a currently present player after cleanup/join updates.
                         ensureHostExistsInPlayers(nextState);
                         nextState.updatedAtMs = now;

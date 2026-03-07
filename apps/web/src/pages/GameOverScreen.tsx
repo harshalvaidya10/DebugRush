@@ -15,7 +15,31 @@ export default function GameOverScreen({
   onPlayAgain,
   error = null,
 }: GameOverScreenProps) {
-  const sortedScoreboard = Object.entries(room.scoreboard).sort((a, b) => b[1] - a[1]);
+  const sortedScoreboard = Object.entries(room.scoreboard).sort(([playerIdA, scoreA], [playerIdB, scoreB]) => {
+    if (scoreA !== scoreB) {
+      return scoreB - scoreA;
+    }
+
+    const wrongCountA = room.wrongAnswersCount[playerIdA] ?? 0;
+    const wrongCountB = room.wrongAnswersCount[playerIdB] ?? 0;
+    if (wrongCountA !== wrongCountB) {
+      return wrongCountA - wrongCountB;
+    }
+
+    const reachedAtA = room.scoreMilestonesMs[playerIdA]?.[String(scoreA)] ?? Number.MAX_SAFE_INTEGER;
+    const reachedAtB = room.scoreMilestonesMs[playerIdB]?.[String(scoreB)] ?? Number.MAX_SAFE_INTEGER;
+    if (reachedAtA !== reachedAtB) {
+      return reachedAtA - reachedAtB;
+    }
+
+    const joinedAtA = room.players.find((candidate) => candidate.id === playerIdA)?.joinedAtMs ?? Number.MAX_SAFE_INTEGER;
+    const joinedAtB = room.players.find((candidate) => candidate.id === playerIdB)?.joinedAtMs ?? Number.MAX_SAFE_INTEGER;
+    if (joinedAtA !== joinedAtB) {
+      return joinedAtA - joinedAtB;
+    }
+
+    return playerIdA.localeCompare(playerIdB);
+  });
   const correctOptionText = room.correctOption ? room.questionOptions?.[room.correctOption] ?? "" : "";
   const isHost = Boolean(meId) && meId === room.hostPlayerId;
   const isTieResult = room.finalDecision === null && room.finalCorrect === null;

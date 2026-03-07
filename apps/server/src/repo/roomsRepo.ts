@@ -90,6 +90,8 @@ function normalizeLegacyRoomState(raw: string): RoomState | null {
             correctOption: null,
             proposerPlayerId: legacy.hostPlayerId,
             counterPlayerId: null,
+            proposerAutoPicked: false,
+            counterAutoPicked: false,
             proposerPick: null,
             proposerReason: null,
             counterPick: null,
@@ -99,6 +101,8 @@ function normalizeLegacyRoomState(raw: string): RoomState | null {
             finalDecision: null,
             finalCorrect: null,
             scoreboard: createDefaultScoreboard(legacy.players.map((player) => player.id)),
+            wrongAnswersCount: {},
+            scoreMilestonesMs: {},
             updatedAtMs: legacy.updatedAtMs,
         };
     } catch {
