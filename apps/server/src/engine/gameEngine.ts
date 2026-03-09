@@ -19,9 +19,9 @@ const ROUND_ACTION_MAX_RETRIES = 3;
 const MIN_CONNECTED_PLAYERS_TO_START = 3;
 
 const PHASE_DURATION_MS: Record<Phase, number> = {
-    propose: 30_000,
-    counter: 20_000,
-    vote: 20_000,
+    propose: 40_000,
+    counter: 30_000,
+    vote: 50_000,
     final: 12_000,
     reveal: 10_000,
 };
@@ -30,721 +30,1540 @@ const PHASE_ORDER: Phase[] = ["propose", "counter", "vote", "final", "reveal"];
 const ALL_OPTIONS: Option[] = ["A", "B", "C", "D"];
 
 const QUESTION_DECK = [
+  {
+    id: "q-001",
+    prompt: "Find the bug in this loop boundary:",
+    snippet: `sum = 0
+for i from 0 to length(arr):
+sum = sum + arr[i]
+return sum`,
+    options: {
+      A: "Loop should stop before length(arr)",
+      B: "sum should start at 1",
+      C: "Return inside loop",
+      D: "Use multiplication",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-002",
+    prompt: "Find the bug in this condition:",
+    snippet: `if role = "admin":
+    return true
+return false`,
+    options: {
+      A: "Use comparison instead of assignment",
+      B: "Remove return true",
+      C: "Use != instead",
+      D: "Move false inside if",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-003",
+    prompt: "Find the bug in this counter:",
+    snippet: `count = 0
+for each item in list:
+    count = count + 2
+return count`,
+    options: {
+      A: "Increase by 1",
+      B: "Start at 2",
+      C: "Return item",
+      D: "Remove loop",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-004",
+    prompt: "Find the bug in search logic:",
+    snippet: `for each item in list:
+    if item == target:
+        return false
+return true`,
+    options: {
+      A: "Should return true when found",
+      B: "Use > instead",
+      C: "Remove final return",
+      D: "Loop backwards",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-005",
+    prompt: "Find the bug in min tracking:",
+    snippet: `min = 0
+for each n in nums:
+    if n < min:
+        min = n
+return min`,
+    options: {
+      A: "Initialize with first element",
+      B: "Use max",
+      C: "Set min = 1",
+      D: "Compare opposite",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-006",
+    prompt: "Find the bug in swap logic:",
+    snippet: `a = b
+b = a`,
+    options: {
+      A: "Need temporary variable",
+      B: "Reverse lines",
+      C: "Add loop",
+      D: "Convert type",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-007",
+    prompt: "Find the bug in average logic:",
+    snippet: `sum = 0
+for each n in nums:
+    sum = sum + n
+return sum`,
+    options: {
+      A: "Need divide by count",
+      B: "Start sum at 1",
+      C: "Multiply values",
+      D: "Remove loop",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-008",
+    prompt: "Find the bug in last element access:",
+    snippet: `return arr[length(arr)]`,
+    options: {
+      A: "Use length(arr)-1",
+      B: "Use arr[1]",
+      C: "Reverse array",
+      D: "Return all",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-009",
+    prompt: "Find the bug in flag setup:",
+    snippet: `found = true
+for each item in list:
+    if item == target:
+        found = false
+return found`,
+    options: {
+      A: "Initial flag wrong",
+      B: "Loop missing continue",
+      C: "Return inside loop",
+      D: "Use count",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-010",
+    prompt: "Find the bug in division:",
+    snippet: `return total / 0`,
+    options: {
+      A: "Cannot divide by zero",
+      B: "Use multiply",
+      C: "Return zero",
+      D: "Remove total",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-011",
+    prompt: "Find the bug in equality check:",
+    snippet: `if a != b:
+    return equal`,
+    options: {
+      A: "Return should indicate not equal",
+      B: "Use >",
+      C: "Swap variables",
+      D: "Remove if",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-012",
+    prompt: "Find the bug in multiplication loop:",
+    snippet: `product = 0
+for each n in nums:
+    product = product * n`,
+    options: {
+      A: "Should start at 1",
+      B: "Use addition",
+      C: "Return inside loop",
+      D: "Remove loop",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-013",
+    prompt: "Find the bug in reverse access:",
+    snippet: `for i from length(arr) to 0:
+    print arr[i]`,
+    options: {
+      A: "Start from length(arr)-1",
+      B: "Start at 1",
+      C: "Print i only",
+      D: "Use forward loop",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-014",
+    prompt: "Find the bug in string compare:",
+    snippet: `if name == null:
+    print length(name)`,
+    options: {
+      A: "Null check should avoid length access",
+      B: "Use number",
+      C: "Remove print",
+      D: "Compare differently",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-015",
+    prompt: "Find the bug in nested loop:",
+    snippet: `for i in rows:
+    for j in cols:
+        print rows[i]`,
+    options: {
+      A: "Inner loop should use cols[j]",
+      B: "Remove outer loop",
+      C: "Swap loops",
+      D: "Use break",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-016",
+    prompt: "Find the bug in counter reset:",
+    snippet: `for each row:
+    count = 0
+count = count + 1`,
+    options: {
+      A: "Increment inside loop",
+      B: "Start count at 1",
+      C: "Remove reset",
+      D: "Use array",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-017",
+    prompt: "Find the bug in boolean logic:",
+    snippet: `if isReady and isReady:
+start()`,
+    options: {
+      A: "Duplicate condition",
+      B: "Use false",
+      C: "Remove if",
+      D: "Use OR only",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-018",
+    prompt: "Find the bug in append logic:",
+    snippet: `list = []
+list[1] = value`,
+    options: {
+      A: "First index usually starts at 0",
+      B: "Use remove",
+      C: "Use null",
+      D: "Clear list",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-019",
+    prompt: "Find the bug in loop increment:",
+    snippet: `i = 0
+while i < 5:
+    print i`,
+    options: {
+      A: "Missing increment of i",
+      B: "Use for loop",
+      C: "Start at 1",
+      D: "Remove print",
+    },
+    correct: "A" as const,
+  },
+
+  {
+    id: "q-020",
+    prompt: "Find the bug in return logic:",
+    snippet: `if valid:
+    return success
+return success`,
+    options: {
+      A: "Both branches same",
+      B: "Remove if",
+      C: "Use loop",
+      D: "Swap returns",
+    },
+    correct: "A" as const,
+  },
     {
-        id: "q-001",
-        prompt: "Find the bug in this JavaScript loop:",
-        snippet: `function sum(arr) {
-  let total = 0;
-  for (let i = 0; i <= arr.length; i++) {
-    total += arr[i];
-  }
-  return total;
-}`,
+        id: "q-021",
+        prompt: "Find the bug in this max calculation:",
+        snippet: `max = 0
+for each n in nums:
+    if n > max:
+        max = n
+return max`,
         options: {
-            A: "Change i <= arr.length to i < arr.length",
-            B: "Initialize total = 1",
-            C: "Use total = arr[i]",
-            D: "Start loop from i = 1",
+            A: "Fails when all numbers are negative",
+            B: "Should use < instead of >",
+            C: "max should start at 1",
+            D: "Return inside loop",
         },
         correct: "A" as const,
     },
+
     {
-        id: "q-002",
-        prompt: "Find the bug in this condition:",
-        snippet: `function isAdmin(role) {
-  if (role = "admin") {
-    return true;
-  }
-  return false;
-}`,
+        id: "q-022",
+        prompt: "Find the bug in this equality branch:",
+        snippet: `if score > 10:
+    return "pass"
+else if score > 20:
+    return "excellent"`,
         options: {
-            A: "Use role == 'admin'",
-            B: "Use role === 'admin'",
-            C: "Use role != 'admin'",
+            A: "Conditions are in wrong order",
+            B: "Need another loop",
+            C: "Use == instead of >",
+            D: "Remove else if",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-023",
+        prompt: "Find the bug in this array copy logic:",
+        snippet: `for i from 0 to length(arr)-1:
+    arr2[i+1] = arr[i]`,
+        options: {
+            A: "Copy starts at wrong index",
+            B: "Should use arr[i+1]",
+            C: "Loop should start at 1",
+            D: "Remove indexing",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-024",
+        prompt: "Find the bug in this sum function:",
+        snippet: `function add(a, b):
+    print a + b`,
+        options: {
+            A: "It prints instead of returning",
+            B: "Should multiply",
+            C: "Should use one argument",
+            D: "Remove function",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-025",
+        prompt: "Find the bug in this null handling:",
+        snippet: `if user != null:
+    return user.name.length
+return user.name`,
+        options: {
+            A: "Null case still accesses user",
+            B: "Should remove length",
+            C: "Need loop before return",
+            D: "Use number instead of name",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-026",
+        prompt: "Find the bug in this counting loop:",
+        snippet: `count = 0
+for i from 1 to 10:
+    count = count + i
+return i`,
+        options: {
+            A: "Returns wrong variable",
+            B: "Loop should start at 0",
+            C: "count should start at 1",
+            D: "Use multiplication",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-027",
+        prompt: "Find the bug in this duplicate check:",
+        snippet: `seen = empty set
+for each item in list:
+    add item to seen
+    if item in seen:
+        return true
+return false`,
+        options: {
+            A: "Check happens after insert",
+            B: "Should use array not set",
+            C: "Return false inside loop",
+            D: "Remove seen",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-028",
+        prompt: "Find the bug in this remainder logic:",
+        snippet: `if n % 2 == 1:
+    return "even"
+else:
+    return "odd"`,
+        options: {
+            A: "Even and odd labels are swapped",
+            B: "Should use division",
+            C: "Remove else",
+            D: "Use n % 3",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-029",
+        prompt: "Find the bug in this length check:",
+        snippet: `if length(list) < 0:
+    return "empty"`,
+        options: {
+            A: "Length cannot be negative",
+            B: "Should use loop",
+            C: "Use > 0",
+            D: "Return number only",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-030",
+        prompt: "Find the bug in this first element access:",
+        snippet: `if length(arr) == 0:
+    return arr[0]
+return null`,
+        options: {
+            A: "Accesses first element when array is empty",
+            B: "Should use arr[1]",
+            C: "Reverse the condition",
+            D: "Remove null",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-031",
+        prompt: "Find the bug in this factorial logic:",
+        snippet: `result = 0
+for i from 1 to n:
+    result = result * i
+return result`,
+        options: {
+            A: "Result should start at 1",
+            B: "Loop should start at 0",
+            C: "Use addition not multiplication",
+            D: "Return i",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-032",
+        prompt: "Find the bug in this string loop:",
+        snippet: `for i from 0 to length(text)-1:
+    print text[length(text)]`,
+        options: {
+            A: "Uses out-of-range index every time",
+            B: "Should print i only",
+            C: "Loop should start at 1",
+            D: "Use numbers not text",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-033",
+        prompt: "Find the bug in this minimum comparison:",
+        snippet: `if a > b:
+    return a
+return b`,
+        options: {
+            A: "Returns maximum, not minimum",
+            B: "Should use loop",
+            C: "Need three variables",
+            D: "Remove return",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-034",
+        prompt: "Find the bug in this loop condition:",
+        snippet: `i = 10
+while i < 0:
+    print i
+    i = i - 1`,
+        options: {
+            A: "Loop never runs with starting value 10",
+            B: "Should increment i",
+            C: "Use array instead",
+            D: "Remove print",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-035",
+        prompt: "Find the bug in this search result:",
+        snippet: `for each item in list:
+    if item == target:
+        return item
+return item`,
+        options: {
+            A: "Returns last item when target not found",
+            B: "Should return target inside loop",
+            C: "Loop should start at 1",
+            D: "Use break only",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-036",
+        prompt: "Find the bug in this password check:",
+        snippet: `if password.length > 8:
+    return "too short"`,
+        options: {
+            A: "Condition message is reversed",
+            B: "Should use loop",
+            C: "Length should be removed",
+            D: "Use number 0",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-037",
+        prompt: "Find the bug in this reset logic:",
+        snippet: `total = 0
+for each n in nums:
+    total = 0
+    total = total + n
+return total`,
+        options: {
+            A: "total resets inside loop",
+            B: "Should subtract n",
+            C: "Start total at 1",
+            D: "Return inside loop",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-038",
+        prompt: "Find the bug in this nested index use:",
+        snippet: `for i from 0 to rows-1:
+    for j from 0 to cols-1:
+        grid[i][i] = 0`,
+        options: {
+            A: "Uses i twice instead of i and j",
+            B: "Should use one loop only",
+            C: "Grid should be text",
+            D: "Set value to 1",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-039",
+        prompt: "Find the bug in this boundary check:",
+        snippet: `if index > 0 and index < length(arr):
+    return arr[index]`,
+        options: {
+            A: "Excludes index 0 incorrectly",
+            B: "Should use > length(arr)",
+            C: "Remove return",
+            D: "Use multiplication",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-040",
+        prompt: "Find the bug in this boolean return:",
+        snippet: `if isValid:
+    return false
+else:
+    return true`,
+        options: {
+            A: "Returns opposite of expected logic",
+            B: "Should remove else",
+            C: "Use numbers instead",
+            D: "Need loop",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-041",
+        prompt: "Find the bug in this average denominator:",
+        snippet: `sum = 0
+for each n in nums:
+    sum = sum + n
+return sum / (length(nums) - 1)`,
+        options: {
+            A: "Wrong denominator for average",
+            B: "Should multiply sum",
+            C: "Loop should start at 1",
+            D: "Remove return",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-042",
+        prompt: "Find the bug in this last index loop:",
+        snippet: `for i from 0 to length(arr)-1:
+    if arr[i] == target:
+        lastIndex = i
+return i`,
+        options: {
+            A: "Returns loop variable instead of lastIndex",
+            B: "Should return arr[i]",
+            C: "Loop must go backward",
+            D: "Remove assignment",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-043",
+        prompt: "Find the bug in this empty-string check:",
+        snippet: `if text == "":
+    return text[0]`,
+        options: {
+            A: "Cannot access first character of empty text",
+            B: "Should use text[1]",
+            C: "Remove condition",
+            D: "Use number 0",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-044",
+        prompt: "Find the bug in this range test:",
+        snippet: `if age < 18 and age > 60:
+    return "special group"`,
+        options: {
+            A: "Condition can never be true",
+            B: "Should use multiplication",
+            C: "Remove return",
+            D: "Use only one comparison always",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-045",
+        prompt: "Find the bug in this loop update:",
+        snippet: `i = 0
+while i < length(arr):
+    i = i + 2
+    process arr[i]`,
+        options: {
+            A: "Skips first element and may go out of bounds",
+            B: "Should decrement i",
+            C: "Use text instead of array",
+            D: "Remove process",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-046",
+        prompt: "Find the bug in this assignment chain:",
+        snippet: `x = 5
+y = x
+x = 10
+return y + x`,
+        options: {
+            A: "Assuming y changes with x is wrong",
+            B: "Should return x only",
+            C: "Use loop",
+            D: "Set x to 0",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-047",
+        prompt: "Find the bug in this break usage:",
+        snippet: `for each item in list:
+    if item != target:
+        break
+return "found"`,
+        options: {
+            A: "Break condition is reversed",
+            B: "Should remove loop",
+            C: "Use continue only",
+            D: "Return number",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-048",
+        prompt: "Find the bug in this sum of positives:",
+        snippet: `sum = 0
+for each n in nums:
+    if n < 0:
+        sum = sum + n
+return sum`,
+        options: {
+            A: "Adds negatives instead of positives",
+            B: "Should start sum at 1",
+            C: "Use multiplication",
+            D: "Return n",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-049",
+        prompt: "Find the bug in this index-based compare:",
+        snippet: `for i from 0 to length(arr)-1:
+    if arr[i] == arr[i+1]:
+        return true`,
+        options: {
+            A: "Last iteration accesses i+1 out of bounds",
+            B: "Should compare arr[i] with arr[i]",
+            C: "Loop should start at 1",
             D: "Remove return true",
         },
-        correct: "B" as const,
+        correct: "A" as const,
     },
-    {
-        id: "q-003",
-        prompt: "Why does this return undefined?",
-        snippet: `const nums = [1, 2, 3];
-const squared = nums.map(n => {
-  n * n;
-});`,
-        options: {
-            A: "Replace map with forEach",
-            B: "Add return inside braces",
-            C: "Use n ^ 2",
-            D: "Use filter instead",
-        },
-        correct: "B" as const,
-    },
-    {
-        id: "q-004",
-        prompt: "Fix the async bug:",
-        snippet: `async function loadUser() {
-  const res = fetch("/api/user");
-  const data = await res.json();
-  return data;
-}`,
-        options: {
-            A: "Remove async",
-            B: "Add await before fetch",
-            C: "Use JSON.parse(res)",
-            D: "Replace json() with text()",
-        },
-        correct: "B" as const,
-    },
-    {
-        id: "q-005",
-        prompt: "Why does React not increment twice?",
-        snippet: `const [count, setCount] = useState(0);
 
-function increment() {
-  setCount(count + 1);
-  setCount(count + 1);
-}`,
-        options: {
-            A: "Use setCount(count + 2)",
-            B: "Use functional state updates",
-            C: "Use count++",
-            D: "Wrap in useMemo",
-        },
-        correct: "B" as const,
-    },
     {
-        id: "q-006",
-        prompt: "Fix the null safety issue:",
-        snippet: `type User = {
-  profile?: {
-    name: string;
-  };
-};
-
-function getName(user: User) {
-  return user.profile.name.toUpperCase();
-}`,
+        id: "q-050",
+        prompt: "Find the bug in this fallback logic:",
+        snippet: `if config exists:
+    use defaultConfig
+else:
+    use config`,
         options: {
-            A: "Use optional chaining",
-            B: "Use any type",
-            C: "Remove profile?",
-            D: "Use toLowerCase()",
+            A: "Uses default and actual config in reverse",
+            B: "Should use loop",
+            C: "Remove else",
+            D: "Use null only",
+        },
+        correct: "A" as const,
+    }, 
+    {
+        id: "q-051",
+        prompt: "Find the bug in this running total:",
+        snippet: `total = 0
+for each n in nums:
+    total = n
+return total`,
+        options: {
+            A: "Overwrites total instead of accumulating",
+            B: "Should start total at 1",
+            C: "Use division",
+            D: "Return inside loop",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-052",
+        prompt: "Find the bug in this empty check:",
+        snippet: `if length(items) != 0:
+    return "empty"`,
+        options: {
+            A: "Condition meaning is reversed",
+            B: "Should use a loop",
+            C: "Use multiplication",
+            D: "Remove return",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-053",
+        prompt: "Find the bug in this index loop:",
+        snippet: `for i from 0 to length(arr):
+    print arr[i]`,
+        options: {
+            A: "Loop goes one step too far",
+            B: "Should start at 1",
+            C: "Use arr[length(arr)] only",
+            D: "Remove print",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-054",
+        prompt: "Find the bug in this condition chain:",
+        snippet: `if score >= 90:
+    return "A"
+if score >= 80:
+    return "B"
+if score >= 70:
+    return "B"`,
+        options: {
+            A: "Last grade label should be different",
+            B: "Conditions need a loop",
+            C: "Use < instead of >=",
+            D: "Remove first condition",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-055",
+        prompt: "Find the bug in this first match logic:",
+        snippet: `for each item in list:
+    if item == target:
+        match = item
+return match`,
+        options: {
+            A: "match may be undefined if target not found",
+            B: "Should return target immediately",
+            C: "Use array not list",
+            D: "Loop should go backward",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-056",
+        prompt: "Find the bug in this countdown:",
+        snippet: `i = 5
+while i > 0:
+    print i
+    i = i + 1`,
+        options: {
+            A: "Counter moves in wrong direction",
+            B: "Should start at 0",
+            C: "Use multiplication",
+            D: "Remove while",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-057",
+        prompt: "Find the bug in this max update:",
+        snippet: `max = nums[0]
+for each n in nums:
+    if n < max:
+        max = n
+return max`,
+        options: {
+            A: "Comparison tracks minimum, not maximum",
+            B: "Should start max at 0",
+            C: "Loop should start at 1 only",
+            D: "Return n",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-058",
+        prompt: "Find the bug in this duplicate finder:",
+        snippet: `for i from 0 to length(arr)-1:
+    for j from i+1 to length(arr)-1:
+        if arr[i] != arr[j]:
+            return true
+return false`,
+        options: {
+            A: "Condition should detect equality, not inequality",
+            B: "Inner loop should start at 0",
+            C: "Return false inside loop",
+            D: "Use one loop only",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-059",
+        prompt: "Find the bug in this password rule:",
+        snippet: `if password.length < 8:
+    return "strong"`,
+        options: {
+            A: "Short password labeled incorrectly",
+            B: "Should use > 100",
+            C: "Need a loop",
+            D: "Remove length",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-060",
+        prompt: "Find the bug in this array initialization:",
+        snippet: `arr = [1, 2, 3]
+for i from 0 to 3:
+    arr[i] = 0`,
+        options: {
+            A: "Last iteration uses invalid index",
+            B: "Should start at 1",
+            C: "Use text array instead",
+            D: "Remove assignment",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-061",
+        prompt: "Find the bug in this divisor check:",
+        snippet: `if n % 2 == 0:
+    return "odd"
+else:
+    return "even"`,
+        options: {
+            A: "Even and odd results are swapped",
+            B: "Should use division by 3",
+            C: "Need another if",
+            D: "Remove else",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-062",
+        prompt: "Find the bug in this nested sum:",
+        snippet: `sum = 0
+for each row in grid:
+    for each val in row:
+        row = sum + val
+return sum`,
+        options: {
+            A: "Updates wrong variable inside loop",
+            B: "Should use multiplication",
+            C: "Return row",
+            D: "Remove inner loop",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-063",
+        prompt: "Find the bug in this substring logic:",
+        snippet: `start = 0
+end = length(text)
+return text[start to end+1]`,
+        options: {
+            A: "End goes past valid range",
+            B: "Should start at 1",
+            C: "Use numbers only",
+            D: "Remove return",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-064",
+        prompt: "Find the bug in this membership check:",
+        snippet: `for each item in list:
+    if item == target:
+        found = true
+return false`,
+        options: {
+            A: "Ignores found flag and always returns false",
+            B: "Should use break only",
+            C: "Loop should start at 1",
+            D: "Use != always",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-065",
+        prompt: "Find the bug in this two-number compare:",
+        snippet: `if a == b:
+    return "different"`,
+        options: {
+            A: "Equality case returns wrong label",
+            B: "Should use loop",
+            C: "Need third number",
+            D: "Remove return",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-066",
+        prompt: "Find the bug in this reverse copy:",
+        snippet: `for i from 0 to length(arr)-1:
+    reversed[i] = arr[i]`,
+        options: {
+            A: "Copies original order instead of reverse",
+            B: "Should use multiplication",
+            C: "Remove indexing",
+            D: "Loop should not exist",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-067",
+        prompt: "Find the bug in this average initialization:",
+        snippet: `count = 0
+sum = 0
+average = sum / count`,
+        options: {
+            A: "Division by zero before counting",
+            B: "Should use multiplication",
+            C: "count should start at 1 always",
+            D: "Remove sum",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-068",
+        prompt: "Find the bug in this case check:",
+        snippet: `if text == "YES":
+    return true
+if text == "yes":
+    return false`,
+        options: {
+            A: "Same meaning handled inconsistently",
+            B: "Should remove first if",
+            C: "Need a loop",
+            D: "Use numbers only",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-069",
+        prompt: "Find the bug in this boundary logic:",
+        snippet: `if index >= 0 and index <= length(arr):
+    return arr[index]`,
+        options: {
+            A: "Allows index equal to length(arr)",
+            B: "Should reject index 0",
+            C: "Remove return",
+            D: "Use < 0 only",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-070",
+        prompt: "Find the bug in this counting condition:",
+        snippet: `count = 0
+for each n in nums:
+    if n > 0:
+        count = count - 1
+return count`,
+        options: {
+            A: "Count changes in wrong direction",
+            B: "Should start count at 1",
+            C: "Use multiplication",
+            D: "Remove condition",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-071",
+        prompt: "Find the bug in this last element removal:",
+        snippet: `remove arr[length(arr)]`,
+        options: {
+            A: "Uses invalid last index",
+            B: "Should remove arr[0]",
+            C: "Need a loop",
+            D: "Should add instead",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-072",
+        prompt: "Find the bug in this boolean flag:",
+        snippet: `isSorted = true
+for i from 0 to length(arr)-2:
+    if arr[i] > arr[i+1]:
+        isSorted = true
+return isSorted`,
+        options: {
+            A: "Flag should become false on disorder",
+            B: "Loop should start at 1",
+            C: "Use multiplication",
+            D: "Remove return",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-073",
+        prompt: "Find the bug in this total price logic:",
+        snippet: `total = price
+for each item in cart:
+    total = total + price`,
+        options: {
+            A: "Adds same price repeatedly instead of item price",
+            B: "Should subtract price",
+            C: "Start total at 0 only",
+            D: "Remove loop",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-074",
+        prompt: "Find the bug in this retry loop:",
+        snippet: `attempts = 0
+while attempts < 3:
+    if success:
+        continue
+    attempts = attempts + 1`,
+        options: {
+            A: "Success path can loop forever",
+            B: "Should start attempts at 1",
+            C: "Use multiplication",
+            D: "Remove while",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-075",
+        prompt: "Find the bug in this square check:",
+        snippet: `if x * x = 9:
+    return true`,
+        options: {
+            A: "Uses assignment instead of comparison",
+            B: "Should return false",
+            C: "Use x + x",
+            D: "Remove if",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-076",
+        prompt: "Find the bug in this sum-until-target logic:",
+        snippet: `sum = 0
+for each n in nums:
+    if sum == target:
+        break
+return sum + n`,
+        options: {
+            A: "May use n outside safe intended context",
+            B: "Should start sum at 1",
+            C: "Use multiplication",
+            D: "Remove break",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-077",
+        prompt: "Find the bug in this pair comparison:",
+        snippet: `for i from 0 to length(arr)-1:
+    if arr[i] > arr[i-1]:
+        print "increasing"`,
+        options: {
+            A: "First iteration uses invalid previous index",
+            B: "Should compare with arr[i+2]",
+            C: "Remove print",
+            D: "Use == only",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-078",
+        prompt: "Find the bug in this login rule:",
+        snippet: `if username == "" and password == "":
+    return "valid"`,
+        options: {
+            A: "Empty credentials accepted incorrectly",
+            B: "Should use loop",
+            C: "Remove password",
+            D: "Use numbers instead",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-079",
+        prompt: "Find the bug in this list build:",
+        snippet: `result = []
+for each item in source:
+    result = item`,
+        options: {
+            A: "Replaces list instead of appending items",
+            B: "Should start with null",
+            C: "Use multiplication",
+            D: "Remove loop",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-080",
+        prompt: "Find the bug in this min finder:",
+        snippet: `min = nums[0]
+for i from 1 to length(nums)-1:
+    if nums[i] > min:
+        min = nums[i]
+return min`,
+        options: {
+            A: "Comparison updates toward maximum, not minimum",
+            B: "Loop should start at 0",
+            C: "Use multiplication",
+            D: "Return i",
         },
         correct: "A" as const,
     },
     {
-        id: "q-007",
-        prompt: "Find the object mutation bug:",
-        snippet: `const result = [];
-const item = {};
-
-for (let i = 0; i < 3; i++) {
-  item.index = i;
-  result.push(item);
-}`,
+        id: "q-081",
+        prompt: "Find the bug in this sum reset logic:",
+        snippet: `sum = 0
+for each n in nums:
+    sum = 0
+    sum = sum + n
+return sum`,
         options: {
-            A: "Push i only",
-            B: "Create a new object each loop",
-            C: "Use Object.freeze(item)",
-            D: "Use const i",
-        },
-        correct: "B" as const,
-    },
-    {
-        id: "q-008",
-        prompt: "Fix the SQL logic:",
-        snippet: `SELECT * FROM users
-WHERE active = true OR email LIKE '%@company.com';`,
-        options: {
-            A: "Replace OR with AND",
-            B: "Remove WHERE",
-            C: "Use NOT LIKE",
-            D: "Use GROUP BY",
+            A: "sum resets inside the loop",
+            B: "Should start sum at 1",
+            C: "Use multiplication instead",
+            D: "Return inside the loop",
         },
         correct: "A" as const,
     },
+
     {
-        id: "q-009",
-        prompt: "Why does this default value fail for empty string?",
-        snippet: `function greet(name) {
-  name = name || "Guest";
-  return "Hello " + name;
-}`,
+        id: "q-082",
+        prompt: "Find the bug in this search condition:",
+        snippet: `for each item in list:
+    if item != target:
+        return true
+return false`,
         options: {
-            A: "Use ?? instead of ||",
-            B: "Use && instead of ||",
-            C: "Always assign Guest",
-            D: "Use trim() only",
+            A: "Returns true for non-target items",
+            B: "Should remove return false",
+            C: "Use multiplication",
+            D: "Loop should start at 1",
         },
         correct: "A" as const,
     },
+
     {
-        id: "q-010",
-        prompt: "Fix the Python default argument bug:",
-        snippet: `def add_item(x, items=[]):
-    items.append(x)
-    return items`,
+        id: "q-083",
+        prompt: "Find the bug in this array comparison:",
+        snippet: `for i from 0 to length(arr)-1:
+    if arr[i] == arr[i+1]:
+        return true
+return false`,
         options: {
-            A: "Use items=None and initialize inside",
-            B: "Use tuple instead",
-            C: "Clear list each call",
-            D: "Use global items",
+            A: "Last iteration can access out of bounds",
+            B: "Should compare arr[i] with arr[0]",
+            C: "Remove return false",
+            D: "Use nested loops only",
         },
         correct: "A" as const,
     },
-//     {
-//         id: "q-011",
-//         prompt: "Fix the infinite loop bug:",
-//         snippet: `let i = 0;
-// while (i < 5) {
-//   console.log(i);
-// }`,
-//         options: {
-//             A: "Change while to if",
-//             B: "Add i++ inside the loop",
-//             C: "Start i at 1",
-//             D: "Use console.error instead",
-//         },
-//         correct: "B" as const,
-//     },
-//     {
-//         id: "q-012",
-//         prompt: "Fix the array access bug:",
-//         snippet: `const arr = [10, 20, 30];
-// console.log(arr[3].toString());`,
-//         options: {
-//             A: "Use arr[2] instead",
-//             B: "Use arr.length",
-//             C: "Push another value first",
-//             D: "Convert arr to object",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-013",
-//         prompt: "Why does filter not work here?",
-//         snippet: `const nums = [1, 2, 3, 4];
-// const even = nums.filter(n => {
-//   n % 2 === 0;
-// });`,
-//         options: {
-//             A: "Replace filter with map",
-//             B: "Add return inside the callback",
-//             C: "Use == instead of ===",
-//             D: "Use some instead",
-//         },
-//         correct: "B" as const,
-//     },
-//     {
-//         id: "q-014",
-//         prompt: "Fix the string concatenation bug:",
-//         snippet: `const name = "Harshal";
-// console.log("Hello, \${name}");`,
-//         options: {
-//             A: "Use backticks instead of quotes",
-//             B: "Use single quotes instead",
-//             C: "Use name.toString()",
-//             D: "Remove ${}",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-015",
-//         prompt: "Fix the promise handling bug:",
-//         snippet: `function getData() {
-//   fetch("/api/data")
-//     .then(res => res.json);
-// }`,
-//         options: {
-//             A: "Use res.json()",
-//             B: "Use JSON.parse(res)",
-//             C: "Remove then",
-//             D: "Use await without async",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-016",
-//         prompt: "Fix the JavaScript equality issue:",
-//         snippet: `console.log([] == []);`,
-//         options: {
-//             A: "Use JSON.stringify on both arrays for value comparison",
-//             B: "Replace == with ===",
-//             C: "Use Object.is([] , []) and expect true",
-//             D: "Convert arrays to Set",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-017",
-//         prompt: "Find the bug in this reduce call:",
-//         snippet: `const nums = [1, 2, 3];
-// const sum = nums.reduce((acc, n) => {
-//   acc + n;
-// }, 0);`,
-//         options: {
-//             A: "Use map instead of reduce",
-//             B: "Return acc + n from callback",
-//             C: "Remove initial value 0",
-//             D: "Use filter first",
-//         },
-//         correct: "B" as const,
-//     },
-//     {
-//         id: "q-018",
-//         prompt: "Fix the stale reference bug:",
-//         snippet: `const user = { name: "A" };
-// const copy = user;
-// copy.name = "B";`,
-//         options: {
-//             A: "Use const copy = { ...user }",
-//             B: "Use Object.freeze(user)",
-//             C: "Use let instead of const",
-//             D: "Use JSON.parse(copy)",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-019",
-//         prompt: "Fix the optional prop rendering bug in React:",
-//         snippet: `function Card({ title }) {
-//   return <h1>{title.toUpperCase()}</h1>;
-// }`,
-//         options: {
-//             A: "Assume title always exists",
-//             B: "Use title?.toUpperCase() ?? 'UNTITLED'",
-//             C: "Convert h1 to div",
-//             D: "Use useEffect",
-//         },
-//         correct: "B" as const,
-//     },
-//     {
-//         id: "q-020",
-//         prompt: "Fix the event handler bug in React:",
-//         snippet: `<button onClick={handleClick()}>Save</button>`,
-//         options: {
-//             A: "Use onClick={handleClick}",
-//             B: "Use onClick='handleClick()'",
-//             C: "Wrap button in form",
-//             D: "Use useMemo",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-021",
-//         prompt: "Fix the division by zero risk:",
-//         snippet: `function avg(sum, count) {
-//   return sum / count;
-// }`,
-//         options: {
-//             A: "Check if count === 0 before dividing",
-//             B: "Use Math.floor",
-//             C: "Convert sum to string",
-//             D: "Multiply count by 1",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-022",
-//         prompt: "Fix the bad destructuring bug:",
-//         snippet: `const user = null;
-// const { name } = user;`,
-//         options: {
-//             A: "Use optional chaining before destructuring or a default object",
-//             B: "Rename name to username",
-//             C: "Use let user = {} only",
-//             D: "Wrap in JSON.stringify",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-023",
-//         prompt: "Fix the for...in bug on arrays:",
-//         snippet: `const arr = ["a", "b", "c"];
-// for (const value in arr) {
-//   console.log(value);
-// }`,
-//         options: {
-//             A: "Use for...of to iterate array values",
-//             B: "Use while loop",
-//             C: "Use Object.keys only",
-//             D: "Use map with no callback",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-024",
-//         prompt: "Fix the Date month bug:",
-//         snippet: `const d = new Date(2026, 12, 1);`,
-//         options: {
-//             A: "Use month 11 for December",
-//             B: "Use month 13 for December",
-//             C: "Use string 'December'",
-//             D: "Remove the day argument",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-025",
-//         prompt: "Fix the missing dependency issue:",
-//         snippet: `useEffect(() => {
-//   fetchUser(userId);
-// }, []);`,
-//         options: {
-//             A: "Add userId to the dependency array",
-//             B: "Remove useEffect",
-//             C: "Use useMemo instead",
-//             D: "Move fetchUser outside component",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-026",
-//         prompt: "Fix the type coercion bug:",
-//         snippet: `console.log("5" + 2); // expected 7`,
-//         options: {
-//             A: "Convert '5' to a number before adding",
-//             B: "Use == instead of +",
-//             C: "Use String(2)",
-//             D: "Wrap in array",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-027",
-//         prompt: "Fix the parseInt mapping bug:",
-//         snippet: `["1", "2", "3"].map(parseInt);`,
-//         options: {
-//             A: "Use str => parseInt(str, 10)",
-//             B: "Use Number.parseFloat only",
-//             C: "Use filter(parseInt)",
-//             D: "Use join first",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-028",
-//         prompt: "Fix the mutation bug in state:",
-//         snippet: `const [user, setUser] = useState({ name: "A" });
 
-// function rename() {
-//   user.name = "B";
-//   setUser(user);
-// }`,
-//         options: {
-//             A: "Mutate then force re-render",
-//             B: "Create a new object in setUser",
-//             C: "Use var instead of const",
-//             D: "Use useRef instead",
-//         },
-//         correct: "B" as const,
-//     },
-//     {
-//         id: "q-029",
-//         prompt: "Fix the Python string/int bug:",
-//         snippet: `age = "21"
-// print(age + 1)`,
-//         options: {
-//             A: "Convert age to int before adding",
-//             B: "Convert 1 to string",
-//             C: "Use age.append(1)",
-//             D: "Use float only",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-030",
-//         prompt: "Fix the SQL delete disaster risk:",
-//         snippet: `DELETE FROM users;`,
-//         options: {
-//             A: "Add a WHERE clause if only specific rows should be deleted",
-//             B: "Replace DELETE with SELECT",
-//             C: "Use INSERT instead",
-//             D: "Add ORDER BY only",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-031",
-//         prompt: "Fix the fetch error handling issue:",
-//         snippet: `const res = await fetch("/api/data");
-// const data = await res.json();`,
-//         options: {
-//             A: "Check res.ok before parsing data",
-//             B: "Always assume response is valid",
-//             C: "Use res.text only",
-//             D: "Remove await",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-032",
-//         prompt: "Fix the sort bug:",
-//         snippet: `const nums = [10, 2, 30];
-// nums.sort();`,
-//         options: {
-//             A: "Use nums.sort((a, b) => a - b)",
-//             B: "Use reverse only",
-//             C: "Use map before sort",
-//             D: "Use join after sort",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-033",
-//         prompt: "Fix the NaN comparison bug:",
-//         snippet: `if (value === NaN) {
-//   console.log("Not a number");
-// }`,
-//         options: {
-//             A: "Use Number.isNaN(value)",
-//             B: "Use value == null",
-//             C: "Use value === undefined",
-//             D: "Use parseInt first",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-034",
-//         prompt: "Fix the missing return in find callback:",
-//         snippet: `const found = [1, 2, 3].find(n => {
-//   n > 1;
-// });`,
-//         options: {
-//             A: "Add return inside the callback",
-//             B: "Use filter instead of find",
-//             C: "Use some instead",
-//             D: "Start array from 0",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-035",
-//         prompt: "Fix the bad object key access:",
-//         snippet: `const key = "name";
-// const user = { name: "Harshal" };
-// console.log(user.key);`,
-//         options: {
-//             A: "Use user[key]",
-//             B: "Use user.name only always",
-//             C: "Use user->key",
-//             D: "Use Object.values(user)",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-036",
-//         prompt: "Fix the JSX list rendering issue:",
-//         snippet: `{items.map(item => <li>{item.name}</li>)}`,
-//         options: {
-//             A: "Add a unique key prop to each li",
-//             B: "Wrap li in span",
-//             C: "Use forEach instead of map",
-//             D: "Convert name to uppercase",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-037",
-//         prompt: "Fix the environment variable issue in Vite:",
-//         snippet: `const apiUrl = process.env.API_URL;`,
-//         options: {
-//             A: "Use import.meta.env.VITE_API_URL",
-//             B: "Use window.env.API_URL only",
-//             C: "Use dotenv in browser directly",
-//             D: "Hardcode localhost always",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-038",
-//         prompt: "Fix the Node response bug:",
-//         snippet: `app.get("/ping", (req, res) => {
-//   res.send(200);
-// });`,
-//         options: {
-//             A: "Use res.status(200).send('OK') or res.sendStatus(200)",
-//             B: "Use res.json(200) only",
-//             C: "Remove req and res",
-//             D: "Use return 200",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-039",
-//         prompt: "Fix the duplicated timer bug in React:",
-//         snippet: `useEffect(() => {
-//   setInterval(() => {
-//     console.log("tick");
-//   }, 1000);
-// }, []);`,
-//         options: {
-//             A: "Return a cleanup function to clearInterval",
-//             B: "Use setTimeout only",
-//             C: "Move console.log outside",
-//             D: "Add more dependencies",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-040",
-//         prompt: "Fix the boolean string bug:",
-//         snippet: `const isAdmin = "false";
-// if (isAdmin) {
-//   console.log("Admin");
-// }`,
-//         options: {
-//             A: "Convert the string to a real boolean before checking",
-//             B: "Use == false",
-//             C: "Leave as is",
-//             D: "Wrap in array",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-041",
-//         prompt: "Fix the splice/slice confusion:",
-//         snippet: `const arr = [1, 2, 3, 4];
-// const copy = arr.splice(0, 2);`,
-//         options: {
-//             A: "Use slice if you want a non-mutating copy",
-//             B: "Use pop twice",
-//             C: "Use shift only",
-//             D: "Use reverse first",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-042",
-//         prompt: "Fix the bad JSON parsing bug:",
-//         snippet: `const obj = JSON.parse({ name: "A" });`,
-//         options: {
-//             A: "Pass a JSON string into JSON.parse",
-//             B: "Use JSON.parse on arrays only",
-//             C: "Replace with JSON.clone",
-//             D: "Use Object.parse",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-043",
-//         prompt: "Fix the wrong HTTP method bug:",
-//         snippet: `fetch("/api/users", {
-//   method: "GET",
-//   body: JSON.stringify({ name: "A" }),
-// });`,
-//         options: {
-//             A: "Use POST if sending a request body",
-//             B: "Use GET with more body fields",
-//             C: "Remove headers only",
-//             D: "Convert body to number",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-044",
-//         prompt: "Fix the Python indentation bug:",
-//         snippet: `def greet(name):
-// print("Hello", name)`,
-//         options: {
-//             A: "Indent the print statement inside the function",
-//             B: "Remove the colon",
-//             C: "Use semicolon instead",
-//             D: "Use return only",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-045",
-//         prompt: "Fix the Set duplicate expectation bug:",
-//         snippet: `const ids = new Set([1, 1, 2, 2]);
-// console.log(ids.length);`,
-//         options: {
-//             A: "Use ids.size instead of ids.length",
-//             B: "Convert Set to array first always",
-//             C: "Use Map instead",
-//             D: "Use ids.count",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-046",
-//         prompt: "Fix the class method this bug:",
-//         snippet: `class Counter {
-//   count = 0;
-//   inc() {
-//     this.count++;
-//   }
-// }
+    {
+        id: "q-084",
+        prompt: "Find the bug in this division check:",
+        snippet: `if divisor != 0:
+    return number / 0`,
+        options: {
+            A: "Divides by zero despite safety check",
+            B: "Should multiply instead",
+            C: "Remove condition",
+            D: "Use divisor = 1",
+        },
+        correct: "A" as const,
+    },
 
-// const c = new Counter();
-// const fn = c.inc;
-// fn();`,
-//         options: {
-//             A: "Bind the method or use an arrow function",
-//             B: "Remove this.count",
-//             C: "Use var c",
-//             D: "Call fn twice",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-047",
-//         prompt: "Fix the Express middleware bug:",
-//         snippet: `app.use((req, res, next) => {
-//   console.log("request");
-// });`,
-//         options: {
-//             A: "Call next() to continue the request chain",
-//             B: "Remove req and res",
-//             C: "Use return console.log only",
-//             D: "Use app.get instead",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-048",
-//         prompt: "Fix the async map bug:",
-//         snippet: `const users = ids.map(async id => fetchUser(id));
-// console.log(users[0].name);`,
-//         options: {
-//             A: "Await Promise.all(users) before using resolved values",
-//             B: "Remove async from map callback",
-//             C: "Use filter instead of map",
-//             D: "Convert ids to string first",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-049",
-//         prompt: "Fix the localStorage JSON bug:",
-//         snippet: `localStorage.setItem("user", { name: "A" });`,
-//         options: {
-//             A: "Use JSON.stringify before storing the object",
-//             B: "Use sessionStorage only",
-//             C: "Use parseInt on the object",
-//             D: "Store under two keys always",
-//         },
-//         correct: "A" as const,
-//     },
-//     {
-//         id: "q-050",
-//         prompt: "Fix the debounce cleanup bug:",
-//         snippet: `useEffect(() => {
-//   const id = setTimeout(() => {
-//     save();
-//   }, 500);
-// }, [value]);`,
-//         options: {
-//             A: "Return a cleanup function to clearTimeout(id)",
-//             B: "Replace setTimeout with setInterval",
-//             C: "Remove dependency array",
-//             D: "Call save() directly before timeout",
-//         },
-//         correct: "A" as const,
-//     },
-];
+    {
+        id: "q-085",
+        prompt: "Find the bug in this descending loop:",
+        snippet: `for i from 10 to 0:
+    print i`,
+        options: {
+            A: "Missing clear decrement/update direction",
+            B: "Should start from 0",
+            C: "Use multiplication",
+            D: "Remove print",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-086",
+        prompt: "Find the bug in this login comparison:",
+        snippet: `if username = savedUsername and password = savedPassword:
+    return true`,
+        options: {
+            A: "Uses assignment instead of comparison",
+            B: "Should return false",
+            C: "Remove password check",
+            D: "Use loop instead",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-087",
+        prompt: "Find the bug in this total item count:",
+        snippet: `count = length(cart) - 1
+return count`,
+        options: {
+            A: "Subtracts 1 without reason",
+            B: "Should multiply by 1",
+            C: "Use loop instead",
+            D: "Return cart",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-088",
+        prompt: "Find the bug in this max loop:",
+        snippet: `max = nums[0]
+for i from 0 to length(nums)-1:
+    if nums[i] > max:
+        max = nums[0]
+return max`,
+        options: {
+            A: "Resets max to first element instead of nums[i]",
+            B: "Should use minimum instead",
+            C: "Loop should start at 1 only",
+            D: "Remove return",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-089",
+        prompt: "Find the bug in this boolean condition:",
+        snippet: `if age >= 18 or age <= 60:
+    return "allowed"`,
+        options: {
+            A: "Condition is too broad and almost always true",
+            B: "Should use multiplication",
+            C: "Remove return",
+            D: "Use age == 18 only",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-090",
+        prompt: "Find the bug in this copy loop:",
+        snippet: `for i from 0 to length(source)-1:
+    destination[0] = source[i]`,
+        options: {
+            A: "Writes every value to same index",
+            B: "Should use source[0] only",
+            C: "Remove loop",
+            D: "Use multiplication",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-091",
+        prompt: "Find the bug in this minimum setup:",
+        snippet: `min = nums[1]
+for each n in nums:
+    if n < min:
+        min = n
+return min`,
+        options: {
+            A: "Fails for arrays with fewer than two elements",
+            B: "Should use maximum instead",
+            C: "Use multiplication",
+            D: "Remove loop",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-092",
+        prompt: "Find the bug in this empty list logic:",
+        snippet: `if length(list) == 0:
+    return list[0]
+else:
+    return "not empty"`,
+        options: {
+            A: "Accesses first element of empty list",
+            B: "Should return list[1]",
+            C: "Use multiplication",
+            D: "Remove else",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-093",
+        prompt: "Find the bug in this update counter:",
+        snippet: `updates = 0
+for each item in items:
+    if needsUpdate:
+        updates = updates + 1
+return item`,
+        options: {
+            A: "Returns wrong variable instead of updates",
+            B: "Should start updates at 1",
+            C: "Use multiplication",
+            D: "Return inside loop",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-094",
+        prompt: "Find the bug in this string match:",
+        snippet: `if text contains keyword:
+    return false
+return true`,
+        options: {
+            A: "Returns opposite of expected result",
+            B: "Should remove return true",
+            C: "Use multiplication",
+            D: "Need a loop always",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-095",
+        prompt: "Find the bug in this duplicate flag:",
+        snippet: `hasDuplicate = false
+for i from 0 to length(arr)-2:
+    if arr[i] == arr[i+1]:
+        hasDuplicate = false
+return hasDuplicate`,
+        options: {
+            A: "Flag should become true when duplicate found",
+            B: "Loop should start at 1",
+            C: "Use nested loops only",
+            D: "Remove flag",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-096",
+        prompt: "Find the bug in this number check:",
+        snippet: `if n % 2 == 0:
+    return "prime"`,
+        options: {
+            A: "Even check does not mean prime",
+            B: "Should use multiplication",
+            C: "Remove return",
+            D: "Use n % 3 only",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-097",
+        prompt: "Find the bug in this matrix traversal:",
+        snippet: `for i from 0 to rows-1:
+    for j from 0 to cols-1:
+        print grid[j][i]`,
+        options: {
+            A: "Row and column indexes are swapped",
+            B: "Should use one loop only",
+            C: "Remove print",
+            D: "Use multiplication",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-098",
+        prompt: "Find the bug in this stop condition:",
+        snippet: `i = 0
+while i <= length(arr):
+    i = i + 1`,
+        options: {
+            A: "Loop condition runs one step too far",
+            B: "Should decrement i",
+            C: "Use array value instead",
+            D: "Remove while",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-099",
+        prompt: "Find the bug in this discount logic:",
+        snippet: `if price > 100:
+    finalPrice = price + 10`,
+        options: {
+            A: "Adds instead of applying a discount",
+            B: "Should remove condition",
+            C: "Use multiplication only",
+            D: "Set price to 0",
+        },
+        correct: "A" as const,
+    },
+
+    {
+        id: "q-100",
+        prompt: "Find the bug in this found-index logic:",
+        snippet: `index = -1
+for i from 0 to length(arr)-1:
+    if arr[i] == target:
+        index = i
+        break
+return i`,
+        options: {
+            A: "Returns loop variable instead of index",
+            B: "Should remove break",
+            C: "Use multiplication",
+            D: "Start index at 0",
+        },
+        correct: "A" as const,
+    }
+]
+
+
 type EngineSuccess = {
     ok: true;
     state: RoomState;

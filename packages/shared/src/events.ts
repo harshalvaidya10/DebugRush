@@ -7,6 +7,8 @@ import type {
     ProposerSubmitPayload,
     RevealSkipPayload,
     RoomState,
+    VoteChatMessage,
+    VoteChatSendPayload,
     VoteSubmitPayload,
 } from "./schemas";
 
@@ -22,6 +24,7 @@ export interface ClientToServerEvents {
     "round:proposer:submit": (payload: ProposerSubmitPayload) => void;
     "round:counter:submit": (payload: CounterSubmitPayload) => void;
     "round:vote:submit": (payload: VoteSubmitPayload) => void;
+    "round:vote:chat:send": (payload: VoteChatSendPayload) => void;
     "round:final:submit": (payload: FinalDecisionPayload) => void;
     "round:reveal:skip": (payload: RevealSkipPayload) => void;
 }
@@ -30,5 +33,6 @@ export interface ServerToClientEvents {
     "auth:identity": (payload: AuthIdentityPayload) => void;
     "room:state": (payload: RoomState) => void;
     "room:left": () => void;
+    "round:vote:chat:message": (payload: VoteChatMessage) => void;
     "action:error": (payload: ActionError) => void;
 }

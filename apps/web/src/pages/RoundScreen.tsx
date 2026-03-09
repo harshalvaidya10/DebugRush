@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { InRoundRoomState, Option, VoteTarget } from "@debugrush/shared";
+import type { InRoundRoomState, Option, VoteChatMessage, VoteTarget } from "@debugrush/shared";
 
 type RoundScreenProps = {
   room: InRoundRoomState;
@@ -8,6 +8,8 @@ type RoundScreenProps = {
   onSubmitProposerPick?: (pick: Option, reason?: string) => void;
   onSubmitCounterPick?: (pick: Option, reason?: string) => void;
   onSubmitVote?: (target: VoteTarget) => void;
+  onSendVoteChatMessage?: (message: string) => void;
+  voteChatMessages?: VoteChatMessage[];
   onSkipReveal?: () => void;
   error?: string | null;
 };
@@ -16,6 +18,20 @@ type ToastState = {
   id: number;
   message: string;
 };
+
+type VoteChatAccentStyle = {
+  bubbleClass: string;
+  nameClass: string;
+};
+
+const VOTE_CHAT_ACCENT_STYLES: VoteChatAccentStyle[] = [
+  { bubbleClass: "vote-chat-accent-emerald", nameClass: "vote-chat-name-emerald" },
+  { bubbleClass: "vote-chat-accent-amber", nameClass: "vote-chat-name-amber" },
+  { bubbleClass: "vote-chat-accent-rose", nameClass: "vote-chat-name-rose" },
+  { bubbleClass: "vote-chat-accent-violet", nameClass: "vote-chat-name-violet" },
+  { bubbleClass: "vote-chat-accent-sky", nameClass: "vote-chat-name-sky" },
+  { bubbleClass: "vote-chat-accent-lime", nameClass: "vote-chat-name-lime" },
+];
 
 function formatCountdown(msRemaining: number) {
   const totalSeconds = Math.max(0, Math.ceil(msRemaining / 1000));
@@ -74,6 +90,19 @@ function formatChoice(room: InRoundRoomState, pick: Option | null) {
   return `${pick}. ${optionText}`.trim();
 }
 
+function hashPlayerIdForAccent(playerId: string) {
+  let hash = 0;
+  for (let index = 0; index < playerId.length; index += 1) {
+    hash = (hash * 31 + playerId.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+}
+
+function getVoteChatAccentForPlayer(playerId: string) {
+  const accentIndex = hashPlayerIdForAccent(playerId) % VOTE_CHAT_ACCENT_STYLES.length;
+  return VOTE_CHAT_ACCENT_STYLES[accentIndex];
+}
+
 export default function RoundScreen({
   room,
   meId,
@@ -81,6 +110,8 @@ export default function RoundScreen({
   onSubmitProposerPick,
   onSubmitCounterPick,
   onSubmitVote,
+  onSendVoteChatMessage,
+  voteChatMessages = [],
   onSkipReveal,
   error = null,
 }: RoundScreenProps) {
@@ -91,8 +122,10 @@ export default function RoundScreen({
   const [proposerSelection, setProposerSelection] = useState<Option | null>(null);
   const [counterSelection, setCounterSelection] = useState<Option | null>(null);
   const [voteSelectionOption, setVoteSelectionOption] = useState<Option | null>(null);
+  const [voteChatDraft, setVoteChatDraft] = useState("");
 
   const lastAnnouncementKeyRef = useRef("");
+  const voteChatScrollRef = useRef<HTMLUListElement | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -157,6 +190,7 @@ export default function RoundScreen({
 
   const canEnterProposerReason = room.phase === "propose" && isMeProposer && !room.proposerPick;
   const canEnterCounterReason = room.phase === "counter" && isMeCounter && !room.counterPick;
+  const canUseVoterChat = room.phase === "vote" && isMeVoter;
   const myVote = meId ? room.votes[meId] : undefined;
   const isSystemAlternativeRound = room.phase === "vote" && Boolean(room.systemAlternativePick);
   const isTieReveal = room.phase === "reveal" && room.finalDecision === null && room.finalCorrect === null;
@@ -181,6 +215,16 @@ export default function RoundScreen({
       id: Date.now() + Math.floor(Math.random() * 10_000),
       message,
     });
+  };
+
+  const submitVoteChatMessage = () => {
+    const normalized = voteChatDraft.trim();
+    if (!normalized || !canUseVoterChat) {
+      return;
+    }
+
+    onSendVoteChatMessage?.(normalized);
+    setVoteChatDraft("");
   };
 
   useEffect(() => {
@@ -272,6 +316,19 @@ export default function RoundScreen({
       setVoteSelectionOption(null);
     }
   }, [room.phase]);
+
+  useEffect(() => {
+    if (!canUseVoterChat) {
+      return;
+    }
+
+    const list = voteChatScrollRef.current;
+    if (!list) {
+      return;
+    }
+
+    list.scrollTop = list.scrollHeight;
+  }, [canUseVoterChat, voteChatMessages]);
 
   return (
     <div className="screen-round min-h-screen px-4 py-6 sm:px-6 lg:px-10">
@@ -654,6 +711,79 @@ export default function RoundScreen({
                   ? "Proposer and counter selected the same option, so the system added one alternative. Vote between these two options."
                   : "Vote between the proposer and counter options shown above."}
               </p>
+            ) : null}
+
+            {canUseVoterChat ? (
+              <section className="mt-4 rounded-xl border border-cyan-300/55 bg-slate-900/70 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-cyan-200">
+                    Voter Chat
+                  </h3>
+                  <p className="text-[11px] text-cyan-300/90">Only voters can read and send in vote phase</p>
+                </div>
+
+                <ul
+                  ref={voteChatScrollRef}
+                  className="mt-3 max-h-52 space-y-2 overflow-y-auto rounded-lg border border-slate-700/80 bg-slate-950/60 p-2"
+                >
+                  {voteChatMessages.length > 0 ? (
+                    voteChatMessages.map((chatMessage, index) => {
+                      const isMine = meId === chatMessage.senderPlayerId;
+                      const accentStyle = getVoteChatAccentForPlayer(chatMessage.senderPlayerId);
+
+                      return (
+                        <li
+                          key={`${chatMessage.senderPlayerId}:${chatMessage.sentAtMs}:${index}`}
+                          className={`vote-chat-bubble ${
+                            isMine
+                              ? "vote-chat-bubble-mine"
+                              : `vote-chat-bubble-other ${accentStyle.bubbleClass}`
+                          }`}
+                        >
+                          <p
+                            className={`text-[11px] font-semibold uppercase tracking-wide ${
+                              isMine ? "text-cyan-100" : accentStyle.nameClass
+                            }`}
+                          >
+                            {isMine ? "You" : chatMessage.senderName}
+                          </p>
+                          <p className="mt-1 whitespace-pre-wrap break-words">{chatMessage.message}</p>
+                        </li>
+                      );
+                    })
+                  ) : (
+                    <li className="rounded-lg border border-dashed border-slate-700 px-2.5 py-2 text-xs text-slate-400">
+                      No chat yet. Coordinate with other voters before locking your vote.
+                    </li>
+                  )}
+                </ul>
+
+                <div className="mt-3 flex gap-2">
+                  <input
+                    value={voteChatDraft}
+                    onChange={(event) => setVoteChatDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter" || event.shiftKey) {
+                        return;
+                      }
+
+                      event.preventDefault();
+                      submitVoteChatMessage();
+                    }}
+                    maxLength={280}
+                    placeholder="Share your vote strategy..."
+                    className="flex-1 rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-500/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={submitVoteChatMessage}
+                    disabled={voteChatDraft.trim().length === 0}
+                    className="rounded-lg border border-cyan-300 bg-cyan-600/90 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Send
+                  </button>
+                </div>
+              </section>
             ) : null}
 
             <div className="mt-4 grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-2">

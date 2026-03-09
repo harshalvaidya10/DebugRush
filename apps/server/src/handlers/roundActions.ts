@@ -2,8 +2,12 @@ import {
     ActionErrorSchema,
     CounterSubmitPayloadSchema,
     FinalDecisionPayloadSchema,
+    type InRoundRoomState,
     ProposerSubmitPayloadSchema,
     RevealSkipPayloadSchema,
+    type VoteChatMessage,
+    VoteChatMessageSchema,
+    VoteChatSendPayloadSchema,
     VoteSubmitPayloadSchema,
     type ClientToServerEvents,
     type ServerToClientEvents,
@@ -18,6 +22,7 @@ import type {
     SubmitRoundActionResult,
     SubmitVoteInput,
 } from "../engine/gameEngine";
+import { getRoom } from "../repo/roomsRepo";
 
 type RegisterRoundActionHandlersParams = {
     redis: Redis;
@@ -87,6 +92,38 @@ async function handleEngineResult(
     } catch (error) {
         console.error("Engine error during round action:", error);
         emitActionError(socket, "INTERNAL_ERROR", "An unexpected error occurred.");
+    }
+}
+
+function getEligibleVoterPlayerIds(state: InRoundRoomState): string[] {
+    return state.players
+        .filter((player) => player.connected)
+        .filter((player) => player.id !== state.proposerPlayerId)
+        .filter((player) => player.id !== state.counterPlayerId)
+        .map((player) => player.id);
+}
+
+function emitVoteChatMessageToVoters(
+    io: Server<ClientToServerEvents, ServerToClientEvents>,
+    roomId: string,
+    voterPlayerIds: string[],
+    payload: VoteChatMessage
+) {
+    const voterPlayerIdSet = new Set(voterPlayerIds);
+
+    for (const [, activeSocket] of io.of("/").sockets) {
+        const activeSocketRoomId = (activeSocket.data.roomId as string | undefined)?.toUpperCase();
+        if (activeSocketRoomId !== roomId) {
+            continue;
+        }
+
+        const activePlayerId = (activeSocket.data.playerId as string | undefined) ??
+            (activeSocket.data.userId as string | undefined);
+        if (!activePlayerId || !voterPlayerIdSet.has(activePlayerId)) {
+            continue;
+        }
+
+        activeSocket.emit("round:vote:chat:message", payload);
     }
 }
 
@@ -190,6 +227,69 @@ export function registerRoundActionHandlers({
                 target: parsed.data.target,
             })
         );
+    });
+
+    socket.on("round:vote:chat:send", async (payload) => {
+        const parsed = VoteChatSendPayloadSchema.safeParse(payload);
+        if (!parsed.success) {
+            emitActionError(socket, "INVALID_PAYLOAD", "Invalid vote chat payload.");
+            return;
+        }
+
+        const roomId = parsed.data.roomId.toUpperCase();
+        if (!validateRoomContext(socket, roomId)) {
+            return;
+        }
+
+        const requesterPlayerId = getRequesterPlayerId(socket);
+        if (!requesterPlayerId) {
+            emitActionError(socket, "UNAUTHORIZED", "Missing authenticated user identity.");
+            return;
+        }
+
+        try {
+            const state = await getRoom(redis, roomId);
+            if (!state) {
+                emitActionError(socket, "ROOM_NOT_FOUND", "Room does not exist.");
+                return;
+            }
+
+            if (state.status !== "in_round" || state.phase !== "vote") {
+                emitActionError(socket, "INVALID_PHASE", "Vote chat is only available during vote phase.");
+                return;
+            }
+
+            const requester = state.players.find((player) => player.id === requesterPlayerId);
+            if (!requester) {
+                emitActionError(socket, "PLAYER_NOT_IN_ROOM", "Player is not in this room.");
+                return;
+            }
+
+            if (!requester.connected) {
+                emitActionError(socket, "PLAYER_OFFLINE", "Reconnect before sending vote chat.");
+                return;
+            }
+
+            const eligibleVoterPlayerIds = getEligibleVoterPlayerIds(state);
+            if (!eligibleVoterPlayerIds.includes(requesterPlayerId)) {
+                emitActionError(socket, "FORBIDDEN", "Only voters can use vote chat.");
+                return;
+            }
+
+            const messagePayload = VoteChatMessageSchema.parse({
+                roomId,
+                roundIndex: state.roundIndex,
+                senderPlayerId: requesterPlayerId,
+                senderName: requester.name,
+                message: parsed.data.message,
+                sentAtMs: Date.now(),
+            });
+
+            emitVoteChatMessageToVoters(io, roomId, eligibleVoterPlayerIds, messagePayload);
+        } catch (error) {
+            console.error("Vote chat send failed:", error);
+            emitActionError(socket, "INTERNAL_ERROR", "Failed to send vote chat message.");
+        }
     });
 
     socket.on("round:final:submit", async (payload) => {
