@@ -55,6 +55,30 @@ export const VoteSubmitPayloadSchema = z.object({
     target: VoteTargetSchema,
 });
 
+const VoteChatTextSchema = z
+    .string()
+    .trim()
+    .min(1)
+    .max(280);
+
+export const VoteChatSendPayloadSchema = z.object({
+    roomId: RoomIdSchema,
+    message: VoteChatTextSchema,
+});
+
+export const VoteChatMessageSchema = z.object({
+    roomId: RoomIdSchema,
+    roundIndex: z.number().int().nonnegative(),
+    senderPlayerId: PlayerIdSchema,
+    senderName: z
+        .string()
+        .trim()
+        .min(1)
+        .max(20),
+    message: VoteChatTextSchema,
+    sentAtMs: z.number().int().nonnegative(),
+});
+
 export const FinalDecisionPayloadSchema = z.object({
     roomId: RoomIdSchema,
     decision: VoteTargetSchema,
@@ -134,6 +158,8 @@ export type GameStartPayload = z.infer<typeof GameStartPayloadSchema>;
 export type ProposerSubmitPayload = z.infer<typeof ProposerSubmitPayloadSchema>;
 export type CounterSubmitPayload = z.infer<typeof CounterSubmitPayloadSchema>;
 export type VoteSubmitPayload = z.infer<typeof VoteSubmitPayloadSchema>;
+export type VoteChatSendPayload = z.infer<typeof VoteChatSendPayloadSchema>;
+export type VoteChatMessage = z.infer<typeof VoteChatMessageSchema>;
 export type FinalDecisionPayload = z.infer<typeof FinalDecisionPayloadSchema>;
 export type RevealSkipPayload = z.infer<typeof RevealSkipPayloadSchema>;
 export type ActionError = z.infer<typeof ActionErrorSchema>;

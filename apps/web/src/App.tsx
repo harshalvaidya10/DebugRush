@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   ActionError,
   AuthIdentityPayload,
   Option,
   RoomState,
+  VoteChatMessage,
   VoteTarget,
 } from "@debugrush/shared";
 import WelcomeScreen from "./pages/WelcomeScreen";
@@ -47,6 +48,8 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [voteChatMessages, setVoteChatMessages] = useState<VoteChatMessage[]>([]);
+  const voteChatScopeKeyRef = useRef<string | null>(null);
   const [savedSession, setSavedSession] = useState<SavedSession | null>(() => {
     try {
       const raw = roomSessionStorage.getItem(ROOM_SESSION_KEY);
@@ -70,6 +73,8 @@ export default function App() {
     setSavedSession(null);
     setAutoJoinAttempted(false);
     setRoom(null);
+    setVoteChatMessages([]);
+    voteChatScopeKeyRef.current = null;
     setJoinError(null);
     setLoading(false);
   };
@@ -89,6 +94,15 @@ export default function App() {
     };
 
     const onRoomState = (state: RoomState) => {
+      const nextVoteChatScopeKey =
+        state.status === "in_round" && state.phase === "vote"
+          ? `${state.roomId}:${state.roundIndex}`
+          : null;
+      if (nextVoteChatScopeKey !== voteChatScopeKeyRef.current) {
+        voteChatScopeKeyRef.current = nextVoteChatScopeKey;
+        setVoteChatMessages([]);
+      }
+
       setRoom(state);
       setLoading(false);
       setJoinError(null);
@@ -105,10 +119,23 @@ export default function App() {
 
     };
 
+    const onVoteChatMessage = (payload: VoteChatMessage) => {
+      const messageScopeKey = `${payload.roomId}:${payload.roundIndex}`;
+      if (!voteChatScopeKeyRef.current || voteChatScopeKeyRef.current !== messageScopeKey) {
+        return;
+      }
+
+      setVoteChatMessages((current) => {
+        const next = [...current, payload];
+        return next.length > 80 ? next.slice(next.length - 80) : next;
+      });
+    };
+
     socket.on("connect", requestIdentity);
     socket.on("auth:identity", onIdentity)
     socket.on("room:state", onRoomState);
     socket.on("room:left", onRoomLeft);
+    socket.on("round:vote:chat:message", onVoteChatMessage);
     socket.on("action:error", onActionError);
     requestIdentity();
     return () => {
@@ -116,6 +143,7 @@ export default function App() {
       socket.off("auth:identity", onIdentity);
       socket.off("room:state", onRoomState);
       socket.off("room:left", onRoomLeft);
+      socket.off("round:vote:chat:message", onVoteChatMessage);
       socket.off("action:error", onActionError);
     };
   }, []);
@@ -223,6 +251,18 @@ export default function App() {
     });
   };
 
+  const handleSendVoteChatMessage = (message: string) => {
+    if (!room || room.status !== "in_round" || room.phase !== "vote") {
+      return;
+    }
+
+    setJoinError(null);
+    socket.emit("round:vote:chat:send", {
+      roomId: room.roomId,
+      message,
+    });
+  };
+
   const handleSkipReveal = () => {
     if (!room || room.status !== "in_round" || room.phase !== "reveal") {
       return;
@@ -265,6 +305,8 @@ export default function App() {
         onSubmitProposerPick={handleSubmitProposerPick}
         onSubmitCounterPick={handleSubmitCounterPick}
         onSubmitVote={handleSubmitVote}
+        onSendVoteChatMessage={handleSendVoteChatMessage}
+        voteChatMessages={voteChatMessages}
         onSkipReveal={handleSkipReveal}
         error={joinError}
       />

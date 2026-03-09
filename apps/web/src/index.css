@@ -300,6 +300,150 @@ pre,
   background: rgba(6, 16, 36, 0.78) !important;
 }
 
+.vote-chat-bubble {
+  position: relative;
+  width: fit-content;
+  max-width: 86%;
+  border-radius: 0.7rem;
+  border: 1px solid;
+  padding: 0.5rem 0.62rem;
+  font-size: 0.75rem;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.24);
+}
+
+.vote-chat-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -0.32rem;
+  width: 0.68rem;
+  height: 0.68rem;
+  transform: rotate(45deg);
+}
+
+.vote-chat-bubble-mine {
+  margin-left: auto;
+  border-color: rgba(125, 211, 252, 0.72);
+  background: rgba(8, 80, 112, 0.64);
+  color: #d9f6ff;
+}
+
+.vote-chat-bubble-mine::after {
+  right: 0.78rem;
+  border-right: 1px solid rgba(125, 211, 252, 0.72);
+  border-bottom: 1px solid rgba(125, 211, 252, 0.72);
+  background: rgba(8, 80, 112, 0.64);
+}
+
+.vote-chat-bubble-other {
+  margin-right: auto;
+  border-color: rgba(71, 85, 105, 0.95);
+  background: rgba(15, 23, 42, 0.88);
+  color: #e2e8f0;
+}
+
+.vote-chat-bubble-other::after {
+  left: 0.78rem;
+  border-right: 1px solid rgba(71, 85, 105, 0.95);
+  border-bottom: 1px solid rgba(71, 85, 105, 0.95);
+  background: rgba(15, 23, 42, 0.88);
+}
+
+.vote-chat-accent-emerald {
+  border-color: rgba(52, 211, 153, 0.76);
+  background: rgba(6, 50, 40, 0.86);
+  color: #e5fff6;
+}
+
+.vote-chat-accent-emerald::after {
+  border-right: 1px solid rgba(52, 211, 153, 0.76);
+  border-bottom: 1px solid rgba(52, 211, 153, 0.76);
+  background: rgba(6, 50, 40, 0.86);
+}
+
+.vote-chat-name-emerald {
+  color: #86efac;
+}
+
+.vote-chat-accent-amber {
+  border-color: rgba(251, 191, 36, 0.8);
+  background: rgba(70, 38, 8, 0.88);
+  color: #fff9e7;
+}
+
+.vote-chat-accent-amber::after {
+  border-right: 1px solid rgba(251, 191, 36, 0.8);
+  border-bottom: 1px solid rgba(251, 191, 36, 0.8);
+  background: rgba(70, 38, 8, 0.88);
+}
+
+.vote-chat-name-amber {
+  color: #fcd34d;
+}
+
+.vote-chat-accent-rose {
+  border-color: rgba(251, 113, 133, 0.78);
+  background: rgba(75, 20, 36, 0.88);
+  color: #fff1f2;
+}
+
+.vote-chat-accent-rose::after {
+  border-right: 1px solid rgba(251, 113, 133, 0.78);
+  border-bottom: 1px solid rgba(251, 113, 133, 0.78);
+  background: rgba(75, 20, 36, 0.88);
+}
+
+.vote-chat-name-rose {
+  color: #fda4af;
+}
+
+.vote-chat-accent-violet {
+  border-color: rgba(167, 139, 250, 0.8);
+  background: rgba(45, 24, 78, 0.88);
+  color: #f5f3ff;
+}
+
+.vote-chat-accent-violet::after {
+  border-right: 1px solid rgba(167, 139, 250, 0.8);
+  border-bottom: 1px solid rgba(167, 139, 250, 0.8);
+  background: rgba(45, 24, 78, 0.88);
+}
+
+.vote-chat-name-violet {
+  color: #c4b5fd;
+}
+
+.vote-chat-accent-sky {
+  border-color: rgba(56, 189, 248, 0.8);
+  background: rgba(8, 48, 74, 0.88);
+  color: #ecfeff;
+}
+
+.vote-chat-accent-sky::after {
+  border-right: 1px solid rgba(56, 189, 248, 0.8);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.8);
+  background: rgba(8, 48, 74, 0.88);
+}
+
+.vote-chat-name-sky {
+  color: #7dd3fc;
+}
+
+.vote-chat-accent-lime {
+  border-color: rgba(163, 230, 53, 0.8);
+  background: rgba(43, 56, 8, 0.88);
+  color: #f7fee7;
+}
+
+.vote-chat-accent-lime::after {
+  border-right: 1px solid rgba(163, 230, 53, 0.8);
+  border-bottom: 1px solid rgba(163, 230, 53, 0.8);
+  background: rgba(43, 56, 8, 0.88);
+}
+
+.vote-chat-name-lime {
+  color: #bef264;
+}
+
 .cyber-timer {
   position: relative;
   animation: timer-pulse 1.15s ease-in-out infinite;
