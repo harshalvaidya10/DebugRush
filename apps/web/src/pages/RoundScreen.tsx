@@ -123,6 +123,7 @@ export default function RoundScreen({
   const [counterSelection, setCounterSelection] = useState<Option | null>(null);
   const [voteSelectionOption, setVoteSelectionOption] = useState<Option | null>(null);
   const [voteChatDraft, setVoteChatDraft] = useState("");
+  const [pendingVoteChatDraft, setPendingVoteChatDraft] = useState<string | null>(null);
 
   const lastAnnouncementKeyRef = useRef("");
   const voteChatScrollRef = useRef<HTMLUListElement | null>(null);
@@ -219,12 +220,12 @@ export default function RoundScreen({
 
   const submitVoteChatMessage = () => {
     const normalized = voteChatDraft.trim();
-    if (!normalized || !canUseVoterChat) {
+    if (!normalized || !canUseVoterChat || !onSendVoteChatMessage) {
       return;
     }
 
-    onSendVoteChatMessage?.(normalized);
-    setVoteChatDraft("");
+    onSendVoteChatMessage(normalized);
+    setPendingVoteChatDraft(normalized);
   };
 
   useEffect(() => {
@@ -329,6 +330,27 @@ export default function RoundScreen({
 
     list.scrollTop = list.scrollHeight;
   }, [canUseVoterChat, voteChatMessages]);
+
+  useEffect(() => {
+    if (!pendingVoteChatDraft || !meId) {
+      return;
+    }
+
+    const didEchoArrive = voteChatMessages.some(
+      (message) =>
+        message.senderPlayerId === meId &&
+        message.message === pendingVoteChatDraft
+    );
+
+    if (!didEchoArrive) {
+      return;
+    }
+
+    setPendingVoteChatDraft(null);
+    setVoteChatDraft((currentDraft) =>
+      currentDraft.trim() === pendingVoteChatDraft ? "" : currentDraft
+    );
+  }, [pendingVoteChatDraft, voteChatMessages, meId]);
 
   return (
     <div className="screen-round min-h-screen px-4 py-6 sm:px-6 lg:px-10">
@@ -763,6 +785,14 @@ export default function RoundScreen({
                     value={voteChatDraft}
                     onChange={(event) => setVoteChatDraft(event.target.value)}
                     onKeyDown={(event) => {
+                      const isComposing =
+                        ("isComposing" in event &&
+                          Boolean((event as { isComposing?: boolean }).isComposing)) ||
+                        event.nativeEvent.isComposing;
+                      if (isComposing) {
+                        return;
+                      }
+
                       if (event.key !== "Enter" || event.shiftKey) {
                         return;
                       }

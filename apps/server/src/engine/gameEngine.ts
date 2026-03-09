@@ -30,303 +30,304 @@ const PHASE_ORDER: Phase[] = ["propose", "counter", "vote", "final", "reveal"];
 const ALL_OPTIONS: Option[] = ["A", "B", "C", "D"];
 
 const QUESTION_DECK = [
-  {
-    id: "q-001",
-    prompt: "Find the bug in this loop boundary:",
-    snippet: `sum = 0
+    {
+        id: "q-001",
+        prompt: "Find the bug in this loop boundary:",
+        snippet: `sum = 0
 for i from 0 to length(arr):
 sum = sum + arr[i]
 return sum`,
-    options: {
-      A: "Loop should stop before length(arr)",
-      B: "sum should start at 1",
-      C: "Return inside loop",
-      D: "Use multiplication",
+        options: {
+            A: "Loop should stop before length(arr)",
+            B: "sum should start at 1",
+            C: "Return inside loop",
+            D: "Use multiplication",
+        },
+        correct: "A" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-002",
-    prompt: "Find the bug in this condition:",
-    snippet: `if role = "admin":
+    {
+        id: "q-002",
+        prompt: "Find the bug in this condition:",
+        snippet: `if role = "admin":
     return true
 return false`,
-    options: {
-      A: "Use comparison instead of assignment",
-      B: "Remove return true",
-      C: "Use != instead",
-      D: "Move false inside if",
+        options: {
+            A: "Remove return true",
+            B: "Use comparison instead of assignment",
+            C: "Use != instead",
+            D: "Move false inside if",
+        },
+        correct: "B" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-003",
-    prompt: "Find the bug in this counter:",
-    snippet: `count = 0
+    {
+        id: "q-003",
+        prompt: "Find the bug in this counter:",
+        snippet: `count = 0
 for each item in list:
     count = count + 2
 return count`,
-    options: {
-      A: "Increase by 1",
-      B: "Start at 2",
-      C: "Return item",
-      D: "Remove loop",
+        options: {
+            A: "Return item",
+            B: "Start at 2",
+            C: "Increase by 1",
+            D: "Remove loop",
+        },
+        correct: "C" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-004",
-    prompt: "Find the bug in search logic:",
-    snippet: `for each item in list:
+    {
+        id: "q-004",
+        prompt: "Find the bug in search logic:",
+        snippet: `for each item in list:
     if item == target:
         return false
 return true`,
-    options: {
-      A: "Should return true when found",
-      B: "Use > instead",
-      C: "Remove final return",
-      D: "Loop backwards",
+        options: {
+            A: "Loop backwards",
+            B: "Use > instead",
+            C: "Remove final return",
+            D: "Should return true when found",
+        },
+        correct: "D" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-005",
-    prompt: "Find the bug in min tracking:",
-    snippet: `min = 0
+    {
+        id: "q-005",
+        prompt: "Find the bug in min tracking:",
+        snippet: `min = 0
 for each n in nums:
     if n < min:
         min = n
 return min`,
-    options: {
-      A: "Initialize with first element",
-      B: "Use max",
-      C: "Set min = 1",
-      D: "Compare opposite",
+        options: {
+            A: "Initialize with first element",
+            B: "Use max",
+            C: "Set min = 1",
+            D: "Compare opposite",
+        },
+        correct: "A" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-006",
-    prompt: "Find the bug in swap logic:",
-    snippet: `a = b
+    {
+        id: "q-006",
+        prompt: "Find the bug in swap logic:",
+        snippet: `a = b
 b = a`,
-    options: {
-      A: "Need temporary variable",
-      B: "Reverse lines",
-      C: "Add loop",
-      D: "Convert type",
+        options: {
+            A: "Reverse lines",
+            B: "Need temporary variable",
+            C: "Add loop",
+            D: "Convert type",
+        },
+        correct: "B" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-007",
-    prompt: "Find the bug in average logic:",
-    snippet: `sum = 0
+    {
+        id: "q-007",
+        prompt: "Find the bug in average logic:",
+        snippet: `sum = 0
 for each n in nums:
     sum = sum + n
 return sum`,
-    options: {
-      A: "Need divide by count",
-      B: "Start sum at 1",
-      C: "Multiply values",
-      D: "Remove loop",
+        options: {
+            A: "Multiply values",
+            B: "Start sum at 1",
+            C: "Need divide by count",
+            D: "Remove loop",
+        },
+        correct: "C" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-008",
-    prompt: "Find the bug in last element access:",
-    snippet: `return arr[length(arr)]`,
-    options: {
-      A: "Use length(arr)-1",
-      B: "Use arr[1]",
-      C: "Reverse array",
-      D: "Return all",
+    {
+        id: "q-008",
+        prompt: "Find the bug in last element access:",
+        snippet: `return arr[length(arr)]`,
+        options: {
+            A: "Return all",
+            B: "Use arr[1]",
+            C: "Reverse array",
+            D: "Use length(arr)-1",
+        },
+        correct: "D" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-009",
-    prompt: "Find the bug in flag setup:",
-    snippet: `found = true
+    {
+        id: "q-009",
+        prompt: "Find the bug in flag setup:",
+        snippet: `found = true
 for each item in list:
     if item == target:
         found = false
 return found`,
-    options: {
-      A: "Initial flag wrong",
-      B: "Loop missing continue",
-      C: "Return inside loop",
-      D: "Use count",
+        options: {
+            A: "Initial flag wrong",
+            B: "Loop missing continue",
+            C: "Return inside loop",
+            D: "Use count",
+        },
+        correct: "A" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-010",
-    prompt: "Find the bug in division:",
-    snippet: `return total / 0`,
-    options: {
-      A: "Cannot divide by zero",
-      B: "Use multiply",
-      C: "Return zero",
-      D: "Remove total",
+    {
+        id: "q-010",
+        prompt: "Find the bug in division:",
+        snippet: `return total / 0`,
+        options: {
+            A: "Use multiply",
+            B: "Cannot divide by zero",
+            C: "Return zero",
+            D: "Remove total",
+        },
+        correct: "B" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-011",
-    prompt: "Find the bug in equality check:",
-    snippet: `if a != b:
+    {
+        id: "q-011",
+        prompt: "Find the bug in equality check:",
+        snippet: `if a != b:
     return equal`,
-    options: {
-      A: "Return should indicate not equal",
-      B: "Use >",
-      C: "Swap variables",
-      D: "Remove if",
+        options: {
+            A: "Swap variables",
+            B: "Use >",
+            C: "Return should indicate not equal",
+            D: "Remove if",
+        },
+        correct: "C" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-012",
-    prompt: "Find the bug in multiplication loop:",
-    snippet: `product = 0
+    {
+        id: "q-012",
+        prompt: "Find the bug in multiplication loop:",
+        snippet: `product = 0
 for each n in nums:
     product = product * n`,
-    options: {
-      A: "Should start at 1",
-      B: "Use addition",
-      C: "Return inside loop",
-      D: "Remove loop",
+        options: {
+            A: "Remove loop",
+            B: "Use addition",
+            C: "Return inside loop",
+            D: "Should start at 1",
+        },
+        correct: "D" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-013",
-    prompt: "Find the bug in reverse access:",
-    snippet: `for i from length(arr) to 0:
+    {
+        id: "q-013",
+        prompt: "Find the bug in reverse access:",
+        snippet: `for i from length(arr) to 0:
     print arr[i]`,
-    options: {
-      A: "Start from length(arr)-1",
-      B: "Start at 1",
-      C: "Print i only",
-      D: "Use forward loop",
+        options: {
+            A: "Start from length(arr)-1",
+            B: "Start at 1",
+            C: "Print i only",
+            D: "Use forward loop",
+        },
+        correct: "A" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-014",
-    prompt: "Find the bug in string compare:",
-    snippet: `if name == null:
+    {
+        id: "q-014",
+        prompt: "Find the bug in string compare:",
+        snippet: `if name == null:
     print length(name)`,
-    options: {
-      A: "Null check should avoid length access",
-      B: "Use number",
-      C: "Remove print",
-      D: "Compare differently",
+        options: {
+            A: "Use number",
+            B: "Null check should avoid length access",
+            C: "Remove print",
+            D: "Compare differently",
+        },
+        correct: "B" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-015",
-    prompt: "Find the bug in nested loop:",
-    snippet: `for i in rows:
+    {
+        id: "q-015",
+        prompt: "Find the bug in nested loop:",
+        snippet: `for i in rows:
     for j in cols:
         print rows[i]`,
-    options: {
-      A: "Inner loop should use cols[j]",
-      B: "Remove outer loop",
-      C: "Swap loops",
-      D: "Use break",
+        options: {
+            A: "Swap loops",
+            B: "Remove outer loop",
+            C: "Inner loop should use cols[j]",
+            D: "Use break",
+        },
+        correct: "C" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-016",
-    prompt: "Find the bug in counter reset:",
-    snippet: `for each row:
+    {
+        id: "q-016",
+        prompt: "Find the bug in counter reset:",
+        snippet: `for each row:
     count = 0
 count = count + 1`,
-    options: {
-      A: "Increment inside loop",
-      B: "Start count at 1",
-      C: "Remove reset",
-      D: "Use array",
+        options: {
+            A: "Use array",
+            B: "Start count at 1",
+            C: "Remove reset",
+            D: "Increment inside loop",
+        },
+        correct: "D" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-017",
-    prompt: "Find the bug in boolean logic:",
-    snippet: `if isReady and isReady:
+    {
+        id: "q-017",
+        prompt: "Find the bug in boolean logic:",
+        snippet: `if isReady and isReady:
 start()`,
-    options: {
-      A: "Duplicate condition",
-      B: "Use false",
-      C: "Remove if",
-      D: "Use OR only",
+        options: {
+            A: "Duplicate condition",
+            B: "Use false",
+            C: "Remove if",
+            D: "Use OR only",
+        },
+        correct: "A" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-018",
-    prompt: "Find the bug in append logic:",
-    snippet: `list = []
+    {
+        id: "q-018",
+        prompt: "Find the bug in append logic:",
+        snippet: `list = []
 list[1] = value`,
-    options: {
-      A: "First index usually starts at 0",
-      B: "Use remove",
-      C: "Use null",
-      D: "Clear list",
+        options: {
+            A: "Use remove",
+            B: "First index usually starts at 0",
+            C: "Use null",
+            D: "Clear list",
+        },
+        correct: "B" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-019",
-    prompt: "Find the bug in loop increment:",
-    snippet: `i = 0
+    {
+        id: "q-019",
+        prompt: "Find the bug in loop increment:",
+        snippet: `i = 0
 while i < 5:
     print i`,
-    options: {
-      A: "Missing increment of i",
-      B: "Use for loop",
-      C: "Start at 1",
-      D: "Remove print",
+        options: {
+            A: "Start at 1",
+            B: "Use for loop",
+            C: "Missing increment of i",
+            D: "Remove print",
+        },
+        correct: "C" as const,
     },
-    correct: "A" as const,
-  },
 
-  {
-    id: "q-020",
-    prompt: "Find the bug in return logic:",
-    snippet: `if valid:
+    {
+        id: "q-020",
+        prompt: "Find the bug in return logic:",
+        snippet: `if valid:
     return success
 return success`,
-    options: {
-      A: "Both branches same",
-      B: "Remove if",
-      C: "Use loop",
-      D: "Swap returns",
+        options: {
+            A: "Swap returns",
+            B: "Remove if",
+            C: "Use loop",
+            D: "Both branches same",
+        },
+        correct: "D" as const,
     },
-    correct: "A" as const,
-  },
+
     {
         id: "q-021",
         prompt: "Find the bug in this max calculation:",
@@ -352,12 +353,12 @@ return max`,
 else if score > 20:
     return "excellent"`,
         options: {
-            A: "Conditions are in wrong order",
-            B: "Need another loop",
+            A: "Need another loop",
+            B: "Conditions are in wrong order",
             C: "Use == instead of >",
             D: "Remove else if",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     },
 
     {
@@ -366,12 +367,12 @@ else if score > 20:
         snippet: `for i from 0 to length(arr)-1:
     arr2[i+1] = arr[i]`,
         options: {
-            A: "Copy starts at wrong index",
+            A: "Loop should start at 1",
             B: "Should use arr[i+1]",
-            C: "Loop should start at 1",
+            C: "Copy starts at wrong index",
             D: "Remove indexing",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -380,12 +381,12 @@ else if score > 20:
         snippet: `function add(a, b):
     print a + b`,
         options: {
-            A: "It prints instead of returning",
+            A: "Remove function",
             B: "Should multiply",
             C: "Should use one argument",
-            D: "Remove function",
+            D: "It prints instead of returning",
         },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -411,12 +412,12 @@ for i from 1 to 10:
     count = count + i
 return i`,
         options: {
-            A: "Returns wrong variable",
-            B: "Loop should start at 0",
+            A: "Loop should start at 0",
+            B: "Returns wrong variable",
             C: "count should start at 1",
             D: "Use multiplication",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     },
 
     {
@@ -429,12 +430,12 @@ for each item in list:
         return true
 return false`,
         options: {
-            A: "Check happens after insert",
+            A: "Return false inside loop",
             B: "Should use array not set",
-            C: "Return false inside loop",
+            C: "Check happens after insert",
             D: "Remove seen",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -445,12 +446,12 @@ return false`,
 else:
     return "odd"`,
         options: {
-            A: "Even and odd labels are swapped",
+            A: "Use n % 3",
             B: "Should use division",
             C: "Remove else",
-            D: "Use n % 3",
+            D: "Even and odd labels are swapped",
         },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -474,12 +475,12 @@ else:
     return arr[0]
 return null`,
         options: {
-            A: "Accesses first element when array is empty",
-            B: "Should use arr[1]",
+            A: "Should use arr[1]",
+            B: "Accesses first element when array is empty",
             C: "Reverse the condition",
             D: "Remove null",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     },
 
     {
@@ -490,12 +491,12 @@ for i from 1 to n:
     result = result * i
 return result`,
         options: {
-            A: "Result should start at 1",
+            A: "Use addition not multiplication",
             B: "Loop should start at 0",
-            C: "Use addition not multiplication",
+            C: "Result should start at 1",
             D: "Return i",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -504,12 +505,12 @@ return result`,
         snippet: `for i from 0 to length(text)-1:
     print text[length(text)]`,
         options: {
-            A: "Uses out-of-range index every time",
+            A: "Use numbers not text",
             B: "Should print i only",
             C: "Loop should start at 1",
-            D: "Use numbers not text",
+            D: "Uses out-of-range index every time",
         },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -535,12 +536,12 @@ while i < 0:
     print i
     i = i - 1`,
         options: {
-            A: "Loop never runs with starting value 10",
-            B: "Should increment i",
+            A: "Should increment i",
+            B: "Loop never runs with starting value 10",
             C: "Use array instead",
             D: "Remove print",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     },
 
     {
@@ -551,12 +552,12 @@ while i < 0:
         return item
 return item`,
         options: {
-            A: "Returns last item when target not found",
+            A: "Loop should start at 1",
             B: "Should return target inside loop",
-            C: "Loop should start at 1",
+            C: "Returns last item when target not found",
             D: "Use break only",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -565,12 +566,12 @@ return item`,
         snippet: `if password.length > 8:
     return "too short"`,
         options: {
-            A: "Condition message is reversed",
+            A: "Use number 0",
             B: "Should use loop",
             C: "Length should be removed",
-            D: "Use number 0",
+            D: "Condition message is reversed",
         },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -597,12 +598,12 @@ return total`,
     for j from 0 to cols-1:
         grid[i][i] = 0`,
         options: {
-            A: "Uses i twice instead of i and j",
-            B: "Should use one loop only",
+            A: "Should use one loop only",
+            B: "Uses i twice instead of i and j",
             C: "Grid should be text",
             D: "Set value to 1",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     },
 
     {
@@ -611,12 +612,12 @@ return total`,
         snippet: `if index > 0 and index < length(arr):
     return arr[index]`,
         options: {
-            A: "Excludes index 0 incorrectly",
+            A: "Remove return",
             B: "Should use > length(arr)",
-            C: "Remove return",
+            C: "Excludes index 0 incorrectly",
             D: "Use multiplication",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -627,12 +628,12 @@ return total`,
 else:
     return true`,
         options: {
-            A: "Returns opposite of expected logic",
+            A: "Need loop",
             B: "Should remove else",
             C: "Use numbers instead",
-            D: "Need loop",
+            D: "Returns opposite of expected logic",
         },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -659,12 +660,12 @@ return sum / (length(nums) - 1)`,
         lastIndex = i
 return i`,
         options: {
-            A: "Returns loop variable instead of lastIndex",
-            B: "Should return arr[i]",
+            A: "Should return arr[i]",
+            B: "Returns loop variable instead of lastIndex",
             C: "Loop must go backward",
             D: "Remove assignment",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     },
 
     {
@@ -673,12 +674,12 @@ return i`,
         snippet: `if text == "":
     return text[0]`,
         options: {
-            A: "Cannot access first character of empty text",
+            A: "Remove condition",
             B: "Should use text[1]",
-            C: "Remove condition",
+            C: "Cannot access first character of empty text",
             D: "Use number 0",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -687,12 +688,12 @@ return i`,
         snippet: `if age < 18 and age > 60:
     return "special group"`,
         options: {
-            A: "Condition can never be true",
+            A: "Use only one comparison always",
             B: "Should use multiplication",
             C: "Remove return",
-            D: "Use only one comparison always",
+            D: "Condition can never be true",
         },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -719,12 +720,12 @@ y = x
 x = 10
 return y + x`,
         options: {
-            A: "Assuming y changes with x is wrong",
-            B: "Should return x only",
+            A: "Should return x only",
+            B: "Assuming y changes with x is wrong",
             C: "Use loop",
             D: "Set x to 0",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     },
 
     {
@@ -735,12 +736,12 @@ return y + x`,
         break
 return "found"`,
         options: {
-            A: "Break condition is reversed",
+            A: "Use continue only",
             B: "Should remove loop",
-            C: "Use continue only",
+            C: "Break condition is reversed",
             D: "Return number",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -752,12 +753,12 @@ for each n in nums:
         sum = sum + n
 return sum`,
         options: {
-            A: "Adds negatives instead of positives",
+            A: "Return n",
             B: "Should start sum at 1",
             C: "Use multiplication",
-            D: "Return n",
+            D: "Adds negatives instead of positives",
         },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -783,13 +784,14 @@ return sum`,
 else:
     use config`,
         options: {
-            A: "Uses default and actual config in reverse",
-            B: "Should use loop",
+            A: "Should use loop",
+            B: "Uses default and actual config in reverse",
             C: "Remove else",
             D: "Use null only",
         },
-        correct: "A" as const,
-    }, 
+        correct: "B" as const,
+    },
+
     {
         id: "q-051",
         prompt: "Find the bug in this running total:",
@@ -798,12 +800,12 @@ for each n in nums:
     total = n
 return total`,
         options: {
-            A: "Overwrites total instead of accumulating",
+            A: "Use division",
             B: "Should start total at 1",
-            C: "Use division",
+            C: "Overwrites total instead of accumulating",
             D: "Return inside loop",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -812,12 +814,12 @@ return total`,
         snippet: `if length(items) != 0:
     return "empty"`,
         options: {
-            A: "Condition meaning is reversed",
+            A: "Remove return",
             B: "Should use a loop",
             C: "Use multiplication",
-            D: "Remove return",
+            D: "Condition meaning is reversed",
         },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -844,12 +846,12 @@ if score >= 80:
 if score >= 70:
     return "B"`,
         options: {
-            A: "Last grade label should be different",
-            B: "Conditions need a loop",
+            A: "Conditions need a loop",
+            B: "Last grade label should be different",
             C: "Use < instead of >=",
             D: "Remove first condition",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     },
 
     {
@@ -860,12 +862,12 @@ if score >= 70:
         match = item
 return match`,
         options: {
-            A: "match may be undefined if target not found",
+            A: "Use array not list",
             B: "Should return target immediately",
-            C: "Use array not list",
+            C: "match may be undefined if target not found",
             D: "Loop should go backward",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -876,12 +878,12 @@ while i > 0:
     print i
     i = i + 1`,
         options: {
-            A: "Counter moves in wrong direction",
+            A: "Remove while",
             B: "Should start at 0",
             C: "Use multiplication",
-            D: "Remove while",
+            D: "Counter moves in wrong direction",
         },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -910,12 +912,12 @@ return max`,
             return true
 return false`,
         options: {
-            A: "Condition should detect equality, not inequality",
-            B: "Inner loop should start at 0",
+            A: "Inner loop should start at 0",
+            B: "Condition should detect equality, not inequality",
             C: "Return false inside loop",
             D: "Use one loop only",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     },
 
     {
@@ -924,12 +926,12 @@ return false`,
         snippet: `if password.length < 8:
     return "strong"`,
         options: {
-            A: "Short password labeled incorrectly",
+            A: "Need a loop",
             B: "Should use > 100",
-            C: "Need a loop",
+            C: "Short password labeled incorrectly",
             D: "Remove length",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -939,12 +941,12 @@ return false`,
 for i from 0 to 3:
     arr[i] = 0`,
         options: {
-            A: "Last iteration uses invalid index",
+            A: "Remove assignment",
             B: "Should start at 1",
             C: "Use text array instead",
-            D: "Remove assignment",
+            D: "Last iteration uses invalid index",
         },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -972,12 +974,12 @@ for each row in grid:
         row = sum + val
 return sum`,
         options: {
-            A: "Updates wrong variable inside loop",
-            B: "Should use multiplication",
+            A: "Should use multiplication",
+            B: "Updates wrong variable inside loop",
             C: "Return row",
             D: "Remove inner loop",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     },
 
     {
@@ -987,12 +989,12 @@ return sum`,
 end = length(text)
 return text[start to end+1]`,
         options: {
-            A: "End goes past valid range",
+            A: "Use numbers only",
             B: "Should start at 1",
-            C: "Use numbers only",
+            C: "End goes past valid range",
             D: "Remove return",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -1003,12 +1005,12 @@ return text[start to end+1]`,
         found = true
 return false`,
         options: {
-            A: "Ignores found flag and always returns false",
+            A: "Use != always",
             B: "Should use break only",
             C: "Loop should start at 1",
-            D: "Use != always",
+            D: "Ignores found flag and always returns false",
         },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -1031,12 +1033,12 @@ return false`,
         snippet: `for i from 0 to length(arr)-1:
     reversed[i] = arr[i]`,
         options: {
-            A: "Copies original order instead of reverse",
-            B: "Should use multiplication",
+            A: "Should use multiplication",
+            B: "Copies original order instead of reverse",
             C: "Remove indexing",
             D: "Loop should not exist",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     },
 
     {
@@ -1046,12 +1048,12 @@ return false`,
 sum = 0
 average = sum / count`,
         options: {
-            A: "Division by zero before counting",
+            A: "count should start at 1 always",
             B: "Should use multiplication",
-            C: "count should start at 1 always",
+            C: "Division by zero before counting",
             D: "Remove sum",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -1062,12 +1064,12 @@ average = sum / count`,
 if text == "yes":
     return false`,
         options: {
-            A: "Same meaning handled inconsistently",
+            A: "Use numbers only",
             B: "Should remove first if",
             C: "Need a loop",
-            D: "Use numbers only",
+            D: "Same meaning handled inconsistently",
         },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -1093,12 +1095,12 @@ for each n in nums:
         count = count - 1
 return count`,
         options: {
-            A: "Count changes in wrong direction",
-            B: "Should start count at 1",
+            A: "Should start count at 1",
+            B: "Count changes in wrong direction",
             C: "Use multiplication",
             D: "Remove condition",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     },
 
     {
@@ -1106,12 +1108,12 @@ return count`,
         prompt: "Find the bug in this last element removal:",
         snippet: `remove arr[length(arr)]`,
         options: {
-            A: "Uses invalid last index",
+            A: "Need a loop",
             B: "Should remove arr[0]",
-            C: "Need a loop",
+            C: "Uses invalid last index",
             D: "Should add instead",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -1123,12 +1125,12 @@ for i from 0 to length(arr)-2:
         isSorted = true
 return isSorted`,
         options: {
-            A: "Flag should become false on disorder",
+            A: "Remove return",
             B: "Loop should start at 1",
             C: "Use multiplication",
-            D: "Remove return",
+            D: "Flag should become false on disorder",
         },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -1155,12 +1157,12 @@ while attempts < 3:
         continue
     attempts = attempts + 1`,
         options: {
-            A: "Success path can loop forever",
-            B: "Should start attempts at 1",
+            A: "Should start attempts at 1",
+            B: "Success path can loop forever",
             C: "Use multiplication",
             D: "Remove while",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     },
 
     {
@@ -1169,12 +1171,12 @@ while attempts < 3:
         snippet: `if x * x = 9:
     return true`,
         options: {
-            A: "Uses assignment instead of comparison",
+            A: "Use x + x",
             B: "Should return false",
-            C: "Use x + x",
+            C: "Uses assignment instead of comparison",
             D: "Remove if",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -1186,12 +1188,12 @@ for each n in nums:
         break
 return sum + n`,
         options: {
-            A: "May use n outside safe intended context",
+            A: "Remove break",
             B: "Should start sum at 1",
             C: "Use multiplication",
-            D: "Remove break",
+            D: "May use n outside safe intended context",
         },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -1215,12 +1217,12 @@ return sum + n`,
         snippet: `if username == "" and password == "":
     return "valid"`,
         options: {
-            A: "Empty credentials accepted incorrectly",
-            B: "Should use loop",
+            A: "Should use loop",
+            B: "Empty credentials accepted incorrectly",
             C: "Remove password",
             D: "Use numbers instead",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     },
 
     {
@@ -1230,12 +1232,12 @@ return sum + n`,
 for each item in source:
     result = item`,
         options: {
-            A: "Replaces list instead of appending items",
+            A: "Use multiplication",
             B: "Should start with null",
-            C: "Use multiplication",
+            C: "Replaces list instead of appending items",
             D: "Remove loop",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -1247,28 +1249,12 @@ for i from 1 to length(nums)-1:
         min = nums[i]
 return min`,
         options: {
-            A: "Comparison updates toward maximum, not minimum",
+            A: "Return i",
             B: "Loop should start at 0",
             C: "Use multiplication",
-            D: "Return i",
+            D: "Comparison updates toward maximum, not minimum",
         },
-        correct: "A" as const,
-    },
-    {
-        id: "q-081",
-        prompt: "Find the bug in this sum reset logic:",
-        snippet: `sum = 0
-for each n in nums:
-    sum = 0
-    sum = sum + n
-return sum`,
-        options: {
-            A: "sum resets inside the loop",
-            B: "Should start sum at 1",
-            C: "Use multiplication instead",
-            D: "Return inside the loop",
-        },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -1288,33 +1274,17 @@ return false`,
     },
 
     {
-        id: "q-083",
-        prompt: "Find the bug in this array comparison:",
-        snippet: `for i from 0 to length(arr)-1:
-    if arr[i] == arr[i+1]:
-        return true
-return false`,
-        options: {
-            A: "Last iteration can access out of bounds",
-            B: "Should compare arr[i] with arr[0]",
-            C: "Remove return false",
-            D: "Use nested loops only",
-        },
-        correct: "A" as const,
-    },
-
-    {
         id: "q-084",
         prompt: "Find the bug in this division check:",
         snippet: `if divisor != 0:
     return number / 0`,
         options: {
-            A: "Divides by zero despite safety check",
-            B: "Should multiply instead",
+            A: "Should multiply instead",
+            B: "Divides by zero despite safety check",
             C: "Remove condition",
             D: "Use divisor = 1",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     },
 
     {
@@ -1323,12 +1293,12 @@ return false`,
         snippet: `for i from 10 to 0:
     print i`,
         options: {
-            A: "Missing clear decrement/update direction",
+            A: "Use multiplication",
             B: "Should start from 0",
-            C: "Use multiplication",
+            C: "Missing clear decrement/update direction",
             D: "Remove print",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -1337,12 +1307,12 @@ return false`,
         snippet: `if username = savedUsername and password = savedPassword:
     return true`,
         options: {
-            A: "Uses assignment instead of comparison",
+            A: "Use loop instead",
             B: "Should return false",
             C: "Remove password check",
-            D: "Use loop instead",
+            D: "Uses assignment instead of comparison",
         },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -1368,12 +1338,12 @@ for i from 0 to length(nums)-1:
         max = nums[0]
 return max`,
         options: {
-            A: "Resets max to first element instead of nums[i]",
-            B: "Should use minimum instead",
+            A: "Should use minimum instead",
+            B: "Resets max to first element instead of nums[i]",
             C: "Loop should start at 1 only",
             D: "Remove return",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     },
 
     {
@@ -1382,12 +1352,12 @@ return max`,
         snippet: `if age >= 18 or age <= 60:
     return "allowed"`,
         options: {
-            A: "Condition is too broad and almost always true",
+            A: "Remove return",
             B: "Should use multiplication",
-            C: "Remove return",
+            C: "Condition is too broad and almost always true",
             D: "Use age == 18 only",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -1396,12 +1366,12 @@ return max`,
         snippet: `for i from 0 to length(source)-1:
     destination[0] = source[i]`,
         options: {
-            A: "Writes every value to same index",
+            A: "Use multiplication",
             B: "Should use source[0] only",
             C: "Remove loop",
-            D: "Use multiplication",
+            D: "Writes every value to same index",
         },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -1429,12 +1399,12 @@ return min`,
 else:
     return "not empty"`,
         options: {
-            A: "Accesses first element of empty list",
-            B: "Should return list[1]",
+            A: "Should return list[1]",
+            B: "Accesses first element of empty list",
             C: "Use multiplication",
             D: "Remove else",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     },
 
     {
@@ -1446,12 +1416,12 @@ for each item in items:
         updates = updates + 1
 return item`,
         options: {
-            A: "Returns wrong variable instead of updates",
+            A: "Use multiplication",
             B: "Should start updates at 1",
-            C: "Use multiplication",
+            C: "Returns wrong variable instead of updates",
             D: "Return inside loop",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -1461,12 +1431,12 @@ return item`,
     return false
 return true`,
         options: {
-            A: "Returns opposite of expected result",
+            A: "Need a loop always",
             B: "Should remove return true",
             C: "Use multiplication",
-            D: "Need a loop always",
+            D: "Returns opposite of expected result",
         },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -1492,12 +1462,12 @@ return hasDuplicate`,
         snippet: `if n % 2 == 0:
     return "prime"`,
         options: {
-            A: "Even check does not mean prime",
-            B: "Should use multiplication",
+            A: "Should use multiplication",
+            B: "Even check does not mean prime",
             C: "Remove return",
             D: "Use n % 3 only",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     },
 
     {
@@ -1507,12 +1477,12 @@ return hasDuplicate`,
     for j from 0 to cols-1:
         print grid[j][i]`,
         options: {
-            A: "Row and column indexes are swapped",
+            A: "Remove print",
             B: "Should use one loop only",
-            C: "Remove print",
+            C: "Row and column indexes are swapped",
             D: "Use multiplication",
         },
-        correct: "A" as const,
+        correct: "C" as const,
     },
 
     {
@@ -1522,12 +1492,12 @@ return hasDuplicate`,
 while i <= length(arr):
     i = i + 1`,
         options: {
-            A: "Loop condition runs one step too far",
+            A: "Remove while",
             B: "Should decrement i",
             C: "Use array value instead",
-            D: "Remove while",
+            D: "Loop condition runs one step too far",
         },
-        correct: "A" as const,
+        correct: "D" as const,
     },
 
     {
@@ -1554,12 +1524,12 @@ for i from 0 to length(arr)-1:
         break
 return i`,
         options: {
-            A: "Returns loop variable instead of index",
-            B: "Should remove break",
+            A: "Should remove break",
+            B: "Returns loop variable instead of index",
             C: "Use multiplication",
             D: "Start index at 0",
         },
-        correct: "A" as const,
+        correct: "B" as const,
     }
 ]
 
