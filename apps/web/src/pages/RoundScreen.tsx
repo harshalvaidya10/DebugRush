@@ -19,6 +19,11 @@ type ToastState = {
   message: string;
 };
 
+type PendingVoteChatDraftState = {
+  text: string;
+  preSendMatchCount: number;
+};
+
 type VoteChatAccentStyle = {
   bubbleClass: string;
   nameClass: string;
@@ -103,6 +108,20 @@ function getVoteChatAccentForPlayer(playerId: string) {
   return VOTE_CHAT_ACCENT_STYLES[accentIndex];
 }
 
+function countMatchingVoteChatMessages(
+  messages: VoteChatMessage[],
+  senderPlayerId: string,
+  text: string
+) {
+  return messages.reduce((count, message) => {
+    if (message.senderPlayerId === senderPlayerId && message.message === text) {
+      return count + 1;
+    }
+
+    return count;
+  }, 0);
+}
+
 export default function RoundScreen({
   room,
   meId,
@@ -123,7 +142,7 @@ export default function RoundScreen({
   const [counterSelection, setCounterSelection] = useState<Option | null>(null);
   const [voteSelectionOption, setVoteSelectionOption] = useState<Option | null>(null);
   const [voteChatDraft, setVoteChatDraft] = useState("");
-  const [pendingVoteChatDraft, setPendingVoteChatDraft] = useState<string | null>(null);
+  const [pendingVoteChatDraft, setPendingVoteChatDraft] = useState<PendingVoteChatDraftState | null>(null);
 
   const lastAnnouncementKeyRef = useRef("");
   const voteChatScrollRef = useRef<HTMLUListElement | null>(null);
@@ -220,12 +239,21 @@ export default function RoundScreen({
 
   const submitVoteChatMessage = () => {
     const normalized = voteChatDraft.trim();
-    if (!normalized || !canUseVoterChat || !onSendVoteChatMessage) {
+    if (!normalized || !canUseVoterChat || !onSendVoteChatMessage || !meId) {
       return;
     }
 
+    const preSendMatchCount = countMatchingVoteChatMessages(
+      voteChatMessages,
+      meId,
+      normalized
+    );
+
     onSendVoteChatMessage(normalized);
-    setPendingVoteChatDraft(normalized);
+    setPendingVoteChatDraft({
+      text: normalized,
+      preSendMatchCount,
+    });
   };
 
   useEffect(() => {
@@ -336,19 +364,19 @@ export default function RoundScreen({
       return;
     }
 
-    const didEchoArrive = voteChatMessages.some(
-      (message) =>
-        message.senderPlayerId === meId &&
-        message.message === pendingVoteChatDraft
+    const currentMatchCount = countMatchingVoteChatMessages(
+      voteChatMessages,
+      meId,
+      pendingVoteChatDraft.text
     );
 
-    if (!didEchoArrive) {
+    if (currentMatchCount <= pendingVoteChatDraft.preSendMatchCount) {
       return;
     }
 
     setPendingVoteChatDraft(null);
     setVoteChatDraft((currentDraft) =>
-      currentDraft.trim() === pendingVoteChatDraft ? "" : currentDraft
+      currentDraft.trim() === pendingVoteChatDraft.text ? "" : currentDraft
     );
   }, [pendingVoteChatDraft, voteChatMessages, meId]);
 

@@ -286,14 +286,16 @@ start()`,
 
     {
         id: "q-018",
-        prompt: "Find the bug in append logic:",
+        prompt: "Find the bug in this list build logic:",
         snippet: `list = []
-list[1] = value`,
+for each value in source:
+    list[0] = value
+return list`,
         options: {
-            A: "Use remove",
-            B: "First index usually starts at 0",
-            C: "Use null",
-            D: "Clear list",
+            A: "Loop should start at index 1",
+            B: "Writes every value to the same index instead of appending",
+            C: "Should clear list inside loop",
+            D: "Return should be inside the loop",
         },
         correct: "B" as const,
     },
@@ -714,16 +716,16 @@ while i < length(arr):
 
     {
         id: "q-046",
-        prompt: "Find the bug in this assignment chain:",
+        prompt: "Which statement about this assignment behavior is true?",
         snippet: `x = 5
 y = x
 x = 10
 return y + x`,
         options: {
-            A: "Should return x only",
+            A: "y automatically changes to 10 after x is reassigned",
             B: "Assuming y changes with x is wrong",
-            C: "Use loop",
-            D: "Set x to 0",
+            C: "y stores a live reference to x in this pseudocode",
+            D: "The expression y + x must evaluate to 20",
         },
         correct: "B" as const,
     },
@@ -1181,9 +1183,10 @@ while attempts < 3:
 
     {
         id: "q-076",
-        prompt: "Find the bug in this sum-until-target logic:",
+        prompt: "Find the bug in this sum-until-target return logic:",
         snippet: `sum = 0
 for each n in nums:
+    sum = sum + n
     if sum == target:
         break
 return sum + n`,
@@ -1198,12 +1201,12 @@ return sum + n`,
 
     {
         id: "q-077",
-        prompt: "Find the bug in this pair comparison:",
+        prompt: "Find the bug in this adjacent pair comparison:",
         snippet: `for i from 0 to length(arr)-1:
-    if arr[i] > arr[i-1]:
-        print "increasing"`,
+    if arr[i] > arr[i+1]:
+        print "decreasing"`,
         options: {
-            A: "First iteration uses invalid previous index",
+            A: "Loop should stop at length(arr)-2 before using i+1",
             B: "Should compare with arr[i+2]",
             C: "Remove print",
             D: "Use == only",
