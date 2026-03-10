@@ -33,15 +33,16 @@ Players join a room, get rotating roles (proposer/counter/voter), answer code-bu
   - `proposer` picks an option (+ optional reason)
   - `counter` picks an option (+ optional reason)
   - remaining connected players vote (`proposer` or `counter`)
+- During vote phase, active voters also get a voter-only realtime chat channel.
 - Majority vote determines final side automatically.
 - If selected side is wrong, game ends immediately.
 - Reveal phase shows outcome, then next round starts (or game ends).
 
 ### Phase timers
 
-- `propose`: 30s
-- `counter`: 20s
-- `vote`: 20s
+- `propose`: 40s
+- `counter`: 30s
+- `vote`: 50s
 - `reveal`: 10s
 - `final`: 12s exists in schema/engine for compatibility, but final decision is currently automatic from majority vote.
 
@@ -71,6 +72,7 @@ Client -> Server:
 - `round:proposer:submit`
 - `round:counter:submit`
 - `round:vote:submit`
+- `round:vote:chat:send`
 - `round:final:submit` (currently disabled by server)
 - `round:reveal:skip`
 
@@ -79,6 +81,7 @@ Server -> Client:
 - `auth:identity`
 - `room:state`
 - `room:left`
+- `round:vote:chat:message`
 - `action:error`
 
 All payloads are zod-validated in `packages/shared/src/schemas.ts`.
@@ -109,6 +112,9 @@ All payloads are zod-validated in `packages/shared/src/schemas.ts`.
 REDIS_URL=redis://localhost:6379
 PORT=4000
 CORS_ORIGIN=http://localhost:5173
+# Optional: allow client-provided socket identity in production
+# if session/token auth is not integrated yet.
+ALLOW_UNVERIFIED_CLIENT_IDENTITY=false
 ```
 
 `apps/web/.env`
@@ -185,10 +191,13 @@ Workspace scripts:
 ## Game logic details worth knowing
 
 - Question deck is defined in `apps/server/src/engine/gameEngine.ts` (`QUESTION_DECK`).
-- Current deck has one active question and many commented entries, so repeated rounds may recycle the same prompt.
+- Current deck contains 98 active questions (no commented-out deck entries), so rounds rotate through a broad question pool.
 - Duplicate proposer/counter pick behavior:
   - server generates a system alternative option for voting.
   - vote resolution gives baseline support to the shared role pick to prevent a single voter from overriding both role picks.
+- Vote chat behavior:
+  - only active voters can send/read chat messages
+  - chat is available only during `vote` phase
 - Immediate game-over conditions include:
   - both proposer and counter pick different wrong options.
   - a player leaves/disconnects during an active match.
